@@ -1,5 +1,8 @@
 use anyhow::{anyhow, Result};
 
+pub mod dbinfo;
+pub mod tables;
+
 pub enum Command {
     DBInfo,
     Tables,
