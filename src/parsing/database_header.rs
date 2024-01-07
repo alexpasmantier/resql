@@ -1,5 +1,3 @@
-use core::panic;
-
 use anyhow::anyhow;
 use nom::AsChar;
 
@@ -45,9 +43,6 @@ impl TryFrom<[u8; 100]> for DatabaseHeader {
 
     fn try_from(value: [u8; 100]) -> Result<Self, Self::Error> {
         let magic_bytes: String = value[..16].iter().map(|i| i.as_char()).collect();
-        if magic_bytes != MAGIC_STRING {
-            panic!("databse header does not start with the magic string");
-        }
         let page_size = u16::from_be_bytes(value[16..18].try_into().unwrap());
         let file_format_write_version = u8::from_be_bytes(value[18..19].try_into().unwrap());
         let file_format_read_version = u8::from_be_bytes(value[19..20].try_into().unwrap());
