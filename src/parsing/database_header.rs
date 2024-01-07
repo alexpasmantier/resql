@@ -3,6 +3,7 @@ use nom::AsChar;
 
 const MAGIC_STRING: &str = "SQLite format 3\0";
 
+#[derive(Debug)]
 pub struct DatabaseHeader {
     // 16 bytes "SQLite format 3\000"
     pub magic_bytes: String,

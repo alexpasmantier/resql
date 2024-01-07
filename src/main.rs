@@ -1,5 +1,6 @@
 use anyhow::{bail, Result};
 use commands::dbinfo::dbinfo;
+use commands::query::query;
 use commands::tables::tables;
 use std::fs::File;
 
@@ -27,6 +28,11 @@ fn main() -> Result<()> {
         Ok(Command::Tables) => {
             let mut file = File::open(&args[1])?;
             tables(&mut file)?;
+        }
+        Ok(Command::Query { table }) => {
+            let mut file = File::open(&args[1])?;
+            let result = query(&mut file, &table)?;
+            println!("{}", result);
         }
         _ => bail!("Missing or invalid command passed: {}", command),
     }
