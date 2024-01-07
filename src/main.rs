@@ -2,6 +2,10 @@ use anyhow::{bail, Result};
 use std::fs::File;
 use std::io::prelude::*;
 
+use crate::parsing::database_header::DatabaseHeader;
+
+pub mod parsing;
+
 fn main() -> Result<()> {
     // Parse arguments
     let args = std::env::args().collect::<Vec<_>>();
@@ -19,15 +23,13 @@ fn main() -> Result<()> {
             let mut header = [0; 100];
             file.read_exact(&mut header)?;
 
-            // The page size is stored at the 16th byte offset, using 2 bytes in big-endian order
-            #[allow(unused_variables)]
-            let page_size = u16::from_be_bytes([header[16], header[17]]);
+            let database_header = DatabaseHeader::try_from(header)?;
 
             // You can use print statements as follows for debugging, they'll be visible when running tests.
             println!("Logs from your program will appear here!");
 
             // Uncomment this block to pass the first stage
-            println!("database page size: {}", page_size);
+            println!("database page size: {}", database_header.page_size);
         }
         _ => bail!("Missing or invalid command passed: {}", command),
     }
