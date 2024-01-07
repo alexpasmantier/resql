@@ -2,6 +2,7 @@ use std::{fs::File, io::Read};
 
 use anyhow::{anyhow, Error, Result};
 
+#[derive(Debug)]
 pub enum BtreePageType {
     InteriorIndex,
     InteriorTable,
@@ -25,6 +26,7 @@ impl TryFrom<u8> for BtreePageType {
     }
 }
 
+#[derive(Debug)]
 pub struct BTreePageHeader {
     // The one-byte flag at offset 0 indicating the b-tree page type.
     //      A value of 2 (0x02) means the page is an interior index b-tree page.
