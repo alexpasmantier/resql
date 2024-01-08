@@ -71,7 +71,7 @@ fn main() -> Result<()> {
                                     ""
                                 }
                             })
-                            .join(" ")
+                            .join("|")
                     )
                 }
             }
