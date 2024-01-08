@@ -17,6 +17,7 @@ use crate::parsing::{
 
 use super::tables::tables;
 
+// TODO: refactor all this
 pub fn query_count(file: &mut File, relation: &str) -> Result<usize> {
     // read header to find out page size
     let mut buf = [0; 100];
