@@ -44,10 +44,21 @@ fn main() -> Result<()> {
                     .join(" ")
             );
         }
-        Ok(Command::Query { table }) => {
+        Ok(Command::Query {
+            expression,
+            relation,
+        }) => {
             let mut file = File::open(&args[1])?;
-            let result = query(&mut file, &table)?;
-            println!("{}", result);
+            let records = query(&mut file, &relation)?;
+            if expression.to_uppercase() == "COUNT(*)" {
+                println!("{}", records.len());
+            } else {
+                for r in records.iter() {
+                    if let SerialType::String { length: _, content } = &r.data[1] {
+                        println!("{}", content);
+                    }
+                }
+            }
         }
         _ => bail!("Missing or invalid command passed: {}", command),
     }

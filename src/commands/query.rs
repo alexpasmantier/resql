@@ -15,7 +15,7 @@ use crate::parsing::{
 
 use super::tables::tables;
 
-pub fn query(file: &mut File, table_name: &str) -> Result<usize> {
+pub fn query(file: &mut File, relation: &str) -> Result<Vec<Record>> {
     // read header to find out page size
     let mut buf = [0; 100];
     file.read_exact(&mut buf)?;
@@ -25,7 +25,7 @@ pub fn query(file: &mut File, table_name: &str) -> Result<usize> {
     let table_records = tables(file)?;
     for rec in table_records.iter() {
         if let SerialType::String { length: _, content } = &rec.data[1] {
-            if content == table_name {
+            if content == relation {
                 let record = rec.clone();
                 if let SerialType::Int8(root_page_number) = record.data[3] {
                     // page numbers start at 1
@@ -53,10 +53,11 @@ pub fn query(file: &mut File, table_name: &str) -> Result<usize> {
                         file.seek(std::io::SeekFrom::Start(current_position))?;
                     }
 
-                    return Ok(records.len());
+                    // decide what to do with records (this is crappy and will need refactoring)
+                    return Ok(records);
                 }
             }
         }
     }
-    Ok(0)
+    Ok(vec![])
 }
