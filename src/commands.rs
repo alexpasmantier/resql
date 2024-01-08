@@ -19,7 +19,7 @@ impl TryFrom<&str> for Command {
             ".tables" => Ok(Command::Tables),
             c => {
                 let command_parts: Vec<&str> = c.split(" ").collect();
-                if command_parts[0] == "SELECT" {
+                if command_parts[0].to_uppercase() == "SELECT" {
                     let table_name = command_parts.last().unwrap();
                     return Ok(Command::Query {
                         table: table_name.to_string(),
