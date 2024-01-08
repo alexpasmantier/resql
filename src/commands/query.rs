@@ -157,10 +157,9 @@ pub fn query_expression(
                         let mut result: Vec<Vec<SerialType>> = Vec::new();
                         for record in records.iter() {
                             let mut cols: Vec<SerialType> = Vec::new();
-                            for (i, col) in record.data.iter().enumerate() {
-                                if select_col_indexes.contains(&i) {
-                                    cols.push(col.clone());
-                                }
+
+                            for i in select_col_indexes.iter() {
+                                cols.push(record.data[*i].clone());
                             }
                             result.push(cols);
                         }
