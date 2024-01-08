@@ -71,9 +71,9 @@ pub fn query_count(
                                     if let SerialType::String {
                                         length: _,
                                         content: value,
-                                    } = r.data[filtercol_index]
+                                    } = &r.data[filtercol_index]
                                     {
-                                        return value == filtervalue;
+                                        return *value == filtervalue;
                                     } else {
                                         return true;
                                     }
@@ -145,9 +145,9 @@ pub fn query_expression(
                                     if let SerialType::String {
                                         length: _,
                                         content: value,
-                                    } = r.data[filtercol_index]
+                                    } = &r.data[filtercol_index]
                                     {
-                                        return value == filtervalue;
+                                        return *value == filtervalue;
                                     } else {
                                         return true;
                                     }
