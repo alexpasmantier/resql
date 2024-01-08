@@ -11,6 +11,7 @@ pub enum Command {
     Query {
         expressions: Vec<String>,
         relation: String,
+        filter: Option<(String, String)>,
     },
 }
 
@@ -35,16 +36,26 @@ impl TryFrom<&str> for Command {
 fn parse_query(str_query: &str) -> Result<Command> {
     let re = Regex::new(r"(?i)select\s+(?P<expressions>[\w,\(\)\*\s]+)\s+from\s+(?P<relation>\w+)")
         .unwrap();
-    let captures = re.captures(str_query).unwrap();
+    let main_captures = re.captures(str_query).unwrap();
 
     let cols_re = Regex::new(r"(?i)([\w\(\*\)]+)").unwrap();
     let expressions: Vec<String> = cols_re
-        .captures_iter(&captures["expressions"])
+        .captures_iter(&main_captures["expressions"])
         .map(|c| c[1].to_string())
         .collect();
 
+    let filter_re =
+        Regex::new(r"(?)\s+where\s+(?P<filtercol>\w+)\s+=\s+'(?P<filtervalue>\w+)'").unwrap();
+    let mut filter: Option<(String, String)> = None;
+    if let Some(filter_captures) = re.captures(str_query) {
+        let filtercol = filter_captures["filtercol"].to_string();
+        let filtervalue = filter_captures["filtervalue"].to_string();
+        filter = Some((filtercol, filtervalue));
+    }
+
     return Ok(Command::Query {
         expressions,
-        relation: captures["relation"].to_string(),
+        relation: main_captures["relation"].to_string(),
+        filter,
     });
 }

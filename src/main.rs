@@ -47,6 +47,7 @@ fn main() -> Result<()> {
         Ok(Command::Query {
             expressions,
             relation,
+            filter,
         }) => {
             let mut file = File::open(&args[1])?;
             if expressions.len() == 1
@@ -55,10 +56,10 @@ fn main() -> Result<()> {
                     .map(|e| e.to_uppercase())
                     .contains(&String::from("COUNT(*)"))
             {
-                let count = query_count(&mut file, &relation)?;
+                let count = query_count(&mut file, &relation, expressions, filter)?;
                 println!("{}", count);
             } else {
-                let results = query_expression(&mut file, &relation, expressions)?;
+                let results = query_expression(&mut file, &relation, expressions, filter)?;
                 for record in results.iter() {
                     println!(
                         "{}",
