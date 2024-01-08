@@ -9,7 +9,7 @@ pub enum Command {
     DBInfo,
     Tables,
     Query {
-        expression: String,
+        expressions: Vec<String>,
         relation: String,
     },
 }
@@ -33,12 +33,18 @@ impl TryFrom<&str> for Command {
 }
 
 fn parse_query(str_query: &str) -> Result<Command> {
-    let re = Regex::new(r"(?i)select (?P<expression>[\w\(\)\*]+) from (?P<relation>\w+)").unwrap();
-    if let Some(captures) = re.captures(str_query) {
-        return Ok(Command::Query {
-            expression: captures["expression"].to_string(),
-            relation: captures["relation"].to_string(),
-        });
-    }
-    return Err(anyhow!("Unable to parse input query"));
+    let re =
+        Regex::new(r"(?i)select\s+(?P<expressions>[\w,\s]+)\s+from\s+(?P<relation>\w+)").unwrap();
+    let captures = re.captures(str_query).unwrap();
+
+    let cols_re = Regex::new(r"(?i)([\w\(\*\)]+)").unwrap();
+    let expressions: Vec<String> = cols_re
+        .captures_iter(&captures["expressions"])
+        .map(|c| c[1].to_string())
+        .collect();
+
+    return Ok(Command::Query {
+        expressions,
+        relation: captures["relation"].to_string(),
+    });
 }

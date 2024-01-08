@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use commands::dbinfo::dbinfo;
-use commands::query::query;
+use commands::query::{query_count, query_expression};
 use commands::tables::tables;
 use std::fs::File;
 
@@ -45,18 +45,29 @@ fn main() -> Result<()> {
             );
         }
         Ok(Command::Query {
-            expression,
+            expressions,
             relation,
         }) => {
             let mut file = File::open(&args[1])?;
-            let records = query(&mut file, &relation)?;
-            if expression.to_uppercase() == "COUNT(*)" {
-                println!("{}", records.len());
+            if expressions.len() == 1 && expressions.contains(&String::from("COUNT(*)")) {
+                let count = query_count(&mut file, &relation)?;
+                println!("{}", count);
             } else {
-                for r in records.iter() {
-                    if let SerialType::String { length: _, content } = &r.data[1] {
-                        println!("{}", content);
-                    }
+                let results = query_expression(&mut file, &relation, expressions)?;
+                for record in results.iter() {
+                    println!(
+                        "{}",
+                        record
+                            .iter()
+                            .map(|r| {
+                                if let SerialType::String { length: _, content } = r {
+                                    content
+                                } else {
+                                    ""
+                                }
+                            })
+                            .join(" ")
+                    )
                 }
             }
         }
