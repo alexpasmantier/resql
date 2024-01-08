@@ -1,5 +1,5 @@
-use std::fs::File;
 use std::io::prelude::*;
+use std::{fs::File, io::SeekFrom};
 
 use anyhow::{anyhow, Result};
 
@@ -51,16 +51,16 @@ impl TryFrom<u64> for SerialType {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Record {
     pub payload_size: u64,
     pub row_id: u64,
     pub data: Vec<SerialType>,
 }
 
-pub fn parse_record(file: &mut File, record_offset: u64) -> Result<Record> {
+pub fn parse_record(file: &mut File, record_offset: SeekFrom) -> Result<Record> {
     // content is at cell_content_offset
-    file.seek(std::io::SeekFrom::Start(record_offset))?;
+    file.seek(record_offset)?;
     // parse payload_size, row_id, cell header
     let (payload_size, _) = parse_varint(file)?;
     let (row_id, _) = parse_varint(file)?;

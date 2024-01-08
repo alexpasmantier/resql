@@ -20,7 +20,6 @@ pub fn query(file: &mut File, table_name: &str) -> Result<usize> {
     let mut buf = [0; 100];
     file.read_exact(&mut buf)?;
     let database_header = DatabaseHeader::try_from(buf)?;
-    dbg!(&database_header);
 
     // read master table to find root_page_number
     let table_records = tables(file)?;
@@ -29,7 +28,9 @@ pub fn query(file: &mut File, table_name: &str) -> Result<usize> {
             if content == table_name {
                 let record = rec.clone();
                 if let SerialType::Int8(root_page_number) = record.data[3] {
-                    let page_offset = root_page_number as u64 * database_header.page_size as u64;
+                    // page numbers start at 1
+                    let page_offset =
+                        (root_page_number - 1) as u64 * database_header.page_size as u64;
                     file.seek(SeekFrom::Start(page_offset))?;
 
                     // parse page header
@@ -40,10 +41,14 @@ pub fn query(file: &mut File, table_name: &str) -> Result<usize> {
                     for _ in 0..page_header.number_of_cells {
                         let mut buffer = [0; 2];
                         file.read_exact(&mut buffer)?;
+                        let cell_content_offset = u16::from_be_bytes(buffer);
                         // save current position
                         let current_position = file.stream_position()?;
-                        let cell_content_offset = u16::from_be_bytes(buffer);
-                        let record = parse_record(file, cell_content_offset as u64)?;
+
+                        let record = parse_record(
+                            file,
+                            SeekFrom::Start(page_offset + cell_content_offset as u64),
+                        )?;
                         records.push(record);
                         file.seek(std::io::SeekFrom::Start(current_position))?;
                     }

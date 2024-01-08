@@ -5,6 +5,8 @@ use commands::tables::tables;
 use std::fs::File;
 
 use crate::commands::Command;
+use crate::parsing::records::SerialType;
+use itertools::Itertools;
 
 pub mod commands;
 pub mod parsing;
@@ -27,7 +29,20 @@ fn main() -> Result<()> {
         }
         Ok(Command::Tables) => {
             let mut file = File::open(&args[1])?;
-            tables(&mut file)?;
+            let records = tables(&mut file)?;
+            println!(
+                "{}",
+                records
+                    .iter()
+                    .map(|r| {
+                        if let SerialType::String { length: _, content } = &r.data[1] {
+                            content
+                        } else {
+                            ""
+                        }
+                    })
+                    .join(" ")
+            );
         }
         Ok(Command::Query { table }) => {
             let mut file = File::open(&args[1])?;

@@ -2,10 +2,9 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use anyhow::Result;
-use itertools::Itertools;
 
 use crate::parsing::page_header::parse_btree_page_header;
-use crate::parsing::records::{parse_record, Record, SerialType};
+use crate::parsing::records::{parse_record, Record};
 
 pub fn tables(file: &mut File) -> Result<Vec<Record>> {
     file.seek(std::io::SeekFrom::Start(100))?;
@@ -21,24 +20,10 @@ pub fn tables(file: &mut File) -> Result<Vec<Record>> {
         // save current position
         let current_position = file.stream_position()?;
         let cell_content_offset = u16::from_be_bytes(buffer);
-        let record = parse_record(file, cell_content_offset as u64)?;
+        let record = parse_record(file, std::io::SeekFrom::Start(cell_content_offset as u64))?;
         records.push(record);
         file.seek(std::io::SeekFrom::Start(current_position))?;
     }
-
-    println!(
-        "{}",
-        records
-            .iter()
-            .map(|r| {
-                if let SerialType::String { length: _, content } = &r.data[1] {
-                    content
-                } else {
-                    ""
-                }
-            })
-            .join(" ")
-    );
 
     Ok(records)
 }
