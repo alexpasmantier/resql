@@ -45,9 +45,9 @@ fn parse_query(str_query: &str) -> Result<Command> {
         .collect();
 
     let filter_re =
-        Regex::new(r"(?)\s+where\s+(?P<filtercol>\w+)\s+=\s+'(?P<filtervalue>\w+)'").unwrap();
+        Regex::new(r"(?i)\s+where\s+(?P<filtercol>\w+)\s+=\s+'(?P<filtervalue>\w+)'").unwrap();
     let mut filter: Option<(String, String)> = None;
-    if let Some(filter_captures) = re.captures(str_query) {
+    if let Some(filter_captures) = filter_re.captures(str_query) {
         let filtercol = filter_captures["filtercol"].to_string();
         let filtervalue = filter_captures["filtervalue"].to_string();
         filter = Some((filtercol, filtervalue));
