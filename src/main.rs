@@ -56,7 +56,7 @@ fn main() -> Result<()> {
                     .map(|e| e.to_uppercase())
                     .contains(&String::from("COUNT(*)"))
             {
-                let count = query_count(&mut file, &relation, expressions, filter)?;
+                let count = query_count(&mut file, &relation, filter)?;
                 println!("{}", count);
             } else {
                 let results = query_expression(&mut file, &relation, expressions, filter)?;

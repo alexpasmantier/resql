@@ -21,7 +21,6 @@ use super::tables::tables;
 pub fn query_count(
     file: &mut File,
     relation: &str,
-    expressions: Vec<String>,
     filter: Option<(String, String)>,
 ) -> Result<usize> {
     // read header to find out page size
@@ -36,7 +35,6 @@ pub fn query_count(
             if content == relation {
                 let record = rec.clone();
                 if let SerialType::String { length: _, content } = &record.data[4] {
-                    let col_indexes = get_col_indexes(&content, expressions.clone());
                     if let SerialType::Int8(root_page_number) = record.data[3] {
                         // page numbers start at 1
                         let page_offset =
@@ -191,8 +189,8 @@ fn get_col_indexes(ddl: &str, columns: Vec<String>) -> Vec<usize> {
     for cap in col_name_re.captures_iter(col_segment) {
         col_names.push(cap[1].to_string());
     }
-    // dbg!(&col_names);
-    // dbg!(&columns);
+    dbg!(&col_names);
+    dbg!(&columns);
     let col_indexes = columns
         .iter()
         .map(|c| {
