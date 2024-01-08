@@ -145,6 +145,8 @@ fn get_col_indexes(ddl: &str, columns: Vec<String>) -> Vec<usize> {
     for cap in col_name_re.captures_iter(col_segment) {
         col_names.push(cap[1].to_string());
     }
+    // dbg!(&col_names);
+    // dbg!(&columns);
     let col_indexes = columns
         .iter()
         .map(|c| {

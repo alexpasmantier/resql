@@ -49,7 +49,12 @@ fn main() -> Result<()> {
             relation,
         }) => {
             let mut file = File::open(&args[1])?;
-            if expressions.len() == 1 && expressions.contains(&String::from("COUNT(*)")) {
+            if expressions.len() == 1
+                && expressions
+                    .iter()
+                    .map(|e| e.to_uppercase())
+                    .contains(&String::from("COUNT(*)"))
+            {
                 let count = query_count(&mut file, &relation)?;
                 println!("{}", count);
             } else {
