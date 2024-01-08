@@ -33,8 +33,8 @@ impl TryFrom<&str> for Command {
 }
 
 fn parse_query(str_query: &str) -> Result<Command> {
-    let re =
-        Regex::new(r"(?i)select\s+(?P<expressions>[\w,\s]+)\s+from\s+(?P<relation>\w+)").unwrap();
+    let re = Regex::new(r"(?i)select\s+(?P<expressions>[\w,\(\)\*\s]+)\s+from\s+(?P<relation>\w+)")
+        .unwrap();
     let captures = re.captures(str_query).unwrap();
 
     let cols_re = Regex::new(r"(?i)([\w\(\*\)]+)").unwrap();
