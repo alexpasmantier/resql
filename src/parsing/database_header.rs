@@ -5,18 +5,18 @@ const MAGIC_STRING: &str = "SQLite format 3\0";
 
 #[derive(Debug)]
 pub struct DatabaseHeader {
-    // 16 bytes "SQLite format 3\000"
+    /// 16 bytes "SQLite format 3\000"
     pub magic_bytes: String,
     pub page_size: u16,
     pub file_format_write_version: u8,
     pub file_format_read_version: u8,
-    // in bytes
+    /// in bytes
     pub page_reserved_space: u8,
-    // must be 64
+    /// must be 64
     pub max_embedded_payload_fraction: u8,
-    // must be 32
+    /// must be 32
     pub min_embedded_payload_fraction: u8,
-    // must be 32
+    /// must be 32
     pub leaf_payload_fraction: u8,
     pub file_change_counter: u32,
     pub db_size_in_pages: u32,
@@ -25,15 +25,15 @@ pub struct DatabaseHeader {
     pub schema_cookie: u32,
     pub schema_format_number: u32,
     pub default_page_cache_size: u32,
-    // The page number of the largest root b-tree page when in auto-vacuum or incremental-vacuum modes, or zero otherwise.
+    /// The page number of the largest root b-tree page when in auto-vacuum or incremental-vacuum modes, or zero otherwise.
     pub largest_root_btree_page_number: u32,
-    // A value of 1 means UTF-8. A value of 2 means UTF-16le. A value of 3 means UTF-16be.
+    /// A value of 1 means UTF-8. A value of 2 means UTF-16le. A value of 3 means UTF-16be.
     pub text_encoding: u32,
     pub user_version: u32,
-    // True (non-zero) for incremental-vacuum mode. False (zero) otherwise.
+    /// True (non-zero) for incremental-vacuum mode. False (zero) otherwise.
     pub incremental_vacuum_mode: u32,
     pub application_id: u32,
-    // Reserved for expansion. Must be zero.
+    /// Reserved for expansion. Must be all zero.
     pub reserved_for_expansion: [u8; 20],
     pub version_valid_for: u32,
     pub sqlite_version_number: u32,

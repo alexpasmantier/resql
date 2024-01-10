@@ -28,21 +28,21 @@ impl TryFrom<u8> for BtreePageType {
 
 #[derive(Debug)]
 pub struct BTreePageHeader {
-    // The one-byte flag at offset 0 indicating the b-tree page type.
-    //      A value of 2 (0x02) means the page is an interior index b-tree page.
-    //      A value of 5 (0x05) means the page is an interior table b-tree page.
-    //      A value of 10 (0x0a) means the page is a leaf index b-tree page.
-    //      A value of 13 (0x0d) means the page is a leaf table b-tree page.
-    // Any other value for the b-tree page type is an error.
+    /// The one-byte flag at offset 0 indicating the b-tree page type.
+    ///      A value of 2 (0x02) means the page is an interior index b-tree page.
+    ///      A value of 5 (0x05) means the page is an interior table b-tree page.
+    ///      A value of 10 (0x0a) means the page is a leaf index b-tree page.
+    ///      A value of 13 (0x0d) means the page is a leaf table b-tree page.
+    /// Any other value for the b-tree page type is an error.
     pub page_type: BtreePageType,
-    // or zero if there are none
+    /// or zero if there are none
     pub first_freeblock_offset: u16,
     pub number_of_cells: u16,
-    // A zero value for this integer is interpreted as 65536
+    /// A zero value for this integer is interpreted as 65536
     pub cell_content_area_offset: u16,
-    // the number of fragmented free bytes within the cell content area
+    /// the number of fragmented free bytes within the cell content area
     pub number_of_fragmented_free_bytes: u8,
-    // This value appears in the header of interior b-tree pages only and is omitted from all other pages.
+    /// This value appears in the header of interior b-tree pages only and is omitted from all other pages.
     pub right_most_pointer: Option<u32>,
 }
 

@@ -59,9 +59,11 @@ pub struct Record {
 }
 
 pub fn parse_record(file: &mut File, record_offset: SeekFrom) -> Result<Record> {
-    // content is at cell_content_offset
+    // content cell is at record_offset
     file.seek(record_offset)?;
     // parse payload_size, row_id, cell header
+    // NOTE: an idea here could be to use `payload_size` to read the entire record data into
+    // memory and *then* parse it, rather than doing incremental parsing
     let (payload_size, _) = parse_varint(file)?;
     let (row_id, _) = parse_varint(file)?;
     let (header_size, varint_size) = parse_varint(file)?;
