@@ -17,10 +17,9 @@ pub fn parse_varint(file: &mut File) -> Result<(u64, usize)> {
 
     varint_bytes.reverse();
     varint_bytes.resize(8, 0);
-    varint_bytes.reverse();
 
     Ok((
-        u64::from_be_bytes(varint_bytes.try_into().unwrap()),
+        u64::from_le_bytes(varint_bytes.try_into().unwrap()),
         varint_size,
     ))
 }

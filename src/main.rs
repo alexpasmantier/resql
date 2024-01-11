@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use commands::dbinfo::dbinfo;
 use commands::query::{query_count, query_expression};
-use commands::tables::tables;
+use commands::tables::parse_schema_table;
 use std::fs::File;
 
 use crate::commands::Command;
@@ -22,14 +22,14 @@ fn main() -> Result<()> {
 
     // Parse command and act accordingly
     let command = &args[2];
+    let mut file = File::open(&args[1])?;
+
     match Command::try_from(command.as_str()) {
         Ok(Command::DBInfo) => {
-            let mut file = File::open(&args[1])?;
             dbinfo(&mut file)?;
         }
         Ok(Command::Tables) => {
-            let mut file = File::open(&args[1])?;
-            let records = tables(&mut file)?;
+            let records = parse_schema_table(&mut file)?;
             println!(
                 "{}",
                 records
@@ -49,7 +49,6 @@ fn main() -> Result<()> {
             relation,
             filter,
         }) => {
-            let mut file = File::open(&args[1])?;
             if expressions.len() == 1
                 && expressions
                     .iter()

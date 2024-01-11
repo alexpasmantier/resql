@@ -62,8 +62,6 @@ pub fn parse_record(file: &mut File, record_offset: SeekFrom) -> Result<Record> 
     // content cell is at record_offset
     file.seek(record_offset)?;
     // parse payload_size, row_id, cell header
-    // NOTE: an idea here could be to use `payload_size` to read the entire record data into
-    // memory and *then* parse it, rather than doing incremental parsing
     let (payload_size, _) = parse_varint(file)?;
     let (row_id, _) = parse_varint(file)?;
     let (header_size, varint_size) = parse_varint(file)?;
@@ -79,84 +77,92 @@ pub fn parse_record(file: &mut File, record_offset: SeekFrom) -> Result<Record> 
         }
     }
     // parse record data
-    let mut record_data: Vec<SerialType> = Vec::new();
-    for serial_type in serial_types.iter() {
-        match serial_type {
-            SerialType::Null => record_data.push(SerialType::Null),
-            SerialType::Int8(_i) => {
-                let mut buf = [0; 1];
-                file.read_exact(&mut buf)?;
-                record_data.push(SerialType::Int8(i8::from_be_bytes(buf)))
-            }
-            SerialType::Int16(_i) => {
-                let mut buf = [0; 2];
-                file.read_exact(&mut buf)?;
-                record_data.push(SerialType::Int16(i16::from_be_bytes(buf)))
-            }
-            SerialType::Int24(_i) => {
-                let mut buf = [0; 3];
-                file.read_exact(&mut buf)?;
-                let bufnew = [vec![0], buf.to_vec()].concat();
-                record_data.push(SerialType::Int32(i32::from_be_bytes(
-                    bufnew.try_into().unwrap(),
-                )))
-            }
-            SerialType::Int32(_i) => {
-                let mut buf = [0; 4];
-                file.read_exact(&mut buf)?;
-                record_data.push(SerialType::Int32(i32::from_be_bytes(buf)))
-            }
-            SerialType::Int48(_i) => {
-                let mut buf = [0; 6];
-                file.read_exact(&mut buf)?;
-                let bufnew = [vec![0, 0], buf.to_vec()].concat();
-                record_data.push(SerialType::Int48(i64::from_be_bytes(
-                    bufnew.try_into().unwrap(),
-                )))
-            }
-            SerialType::Int64(_i) => {
-                let mut buf = [0; 8];
-                file.read_exact(&mut buf)?;
-                record_data.push(SerialType::Int64(i64::from_be_bytes(buf)))
-            }
-            SerialType::Float64(_i) => {
-                let mut buf = [0; 8];
-                file.read_exact(&mut buf)?;
-                record_data.push(SerialType::Float64(f64::from_be_bytes(buf)))
-            }
-            SerialType::IntZero => record_data.push(SerialType::IntZero),
-            SerialType::IntOne => record_data.push(SerialType::IntOne),
-            SerialType::Blob { length, content: _ } => {
-                let mut buf = [0; 1];
-                let mut blob_contents: Vec<u8> = Vec::new();
-                for _ in 0..*length {
-                    file.read_exact(&mut buf)?;
-                    blob_contents.push(buf[0]);
-                }
-                record_data.push(SerialType::Blob {
-                    length: *length,
-                    content: blob_contents,
-                })
-            }
-            SerialType::String { length, content: _ } => {
-                let mut buf = [0; 1];
-                let mut string_characters: Vec<char> = Vec::new();
-                for _ in 0..*length {
-                    file.read_exact(&mut buf)?;
-                    string_characters.push(buf[0] as char);
-                }
-                record_data.push(SerialType::String {
-                    length: *length,
-                    content: string_characters.iter().collect(),
-                })
-            }
-            SerialType::Reserved => {}
+    match serial_types
+        .iter()
+        .map(|s| parse_serial_type(file, s))
+        .collect()
+    {
+        Ok(record_data) => {
+            return Ok(Record {
+                payload_size,
+                row_id,
+                data: record_data,
+            })
         }
+        Err(e) => Err(anyhow!("unable to parse record: {}", e)),
     }
+}
 
-    Ok(Record {
-        payload_size,
-        row_id,
-        data: record_data,
-    })
+fn parse_serial_type(file: &mut File, serial_type: &SerialType) -> Result<SerialType> {
+    match serial_type {
+        SerialType::Null => Ok(SerialType::Null),
+        SerialType::Int8(_i) => {
+            let mut buf = [0; 1];
+            file.read_exact(&mut buf)?;
+            Ok(SerialType::Int8(i8::from_be_bytes(buf)))
+        }
+        SerialType::Int16(_i) => {
+            let mut buf = [0; 2];
+            file.read_exact(&mut buf)?;
+            Ok(SerialType::Int16(i16::from_be_bytes(buf)))
+        }
+        SerialType::Int24(_i) => {
+            let mut buf = [0; 3];
+            file.read_exact(&mut buf)?;
+            let bufnew = [vec![0], buf.to_vec()].concat();
+            Ok(SerialType::Int32(i32::from_be_bytes(
+                bufnew.try_into().unwrap(),
+            )))
+        }
+        SerialType::Int32(_i) => {
+            let mut buf = [0; 4];
+            file.read_exact(&mut buf)?;
+            Ok(SerialType::Int32(i32::from_be_bytes(buf)))
+        }
+        SerialType::Int48(_i) => {
+            let mut buf = [0; 6];
+            file.read_exact(&mut buf)?;
+            let bufnew = [vec![0, 0], buf.to_vec()].concat();
+            Ok(SerialType::Int48(i64::from_be_bytes(
+                bufnew.try_into().unwrap(),
+            )))
+        }
+        SerialType::Int64(_i) => {
+            let mut buf = [0; 8];
+            file.read_exact(&mut buf)?;
+            Ok(SerialType::Int64(i64::from_be_bytes(buf)))
+        }
+        SerialType::Float64(_i) => {
+            let mut buf = [0; 8];
+            file.read_exact(&mut buf)?;
+            Ok(SerialType::Float64(f64::from_be_bytes(buf)))
+        }
+        SerialType::IntZero => Ok(SerialType::IntZero),
+        SerialType::IntOne => Ok(SerialType::IntOne),
+        SerialType::Blob { length, content: _ } => {
+            let mut buf = [0; 1];
+            let mut blob_contents: Vec<u8> = Vec::new();
+            for _ in 0..*length {
+                file.read_exact(&mut buf)?;
+                blob_contents.push(buf[0]);
+            }
+            Ok(SerialType::Blob {
+                length: *length,
+                content: blob_contents,
+            })
+        }
+        SerialType::String { length, content: _ } => {
+            let mut buf = [0; 1];
+            let mut string_characters: Vec<char> = Vec::new();
+            for _ in 0..*length {
+                file.read_exact(&mut buf)?;
+                string_characters.push(buf[0] as char);
+            }
+            Ok(SerialType::String {
+                length: *length,
+                content: string_characters.iter().collect(),
+            })
+        }
+        SerialType::Reserved => Ok(SerialType::Reserved),
+    }
 }

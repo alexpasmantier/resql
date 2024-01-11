@@ -15,7 +15,7 @@ use crate::parsing::{
     records::{Record, SerialType},
 };
 
-use super::tables::tables;
+use super::tables::parse_schema_table;
 
 // TODO: refactor all this
 pub fn query_count(
@@ -29,7 +29,7 @@ pub fn query_count(
     let database_header = DatabaseHeader::try_from(buf)?;
 
     // read master table to find root_page_number
-    let table_records = tables(file)?;
+    let table_records = parse_schema_table(file)?;
     for rec in table_records.iter() {
         if let SerialType::String { length: _, content } = &rec.data[1] {
             if content == relation {
@@ -102,7 +102,7 @@ pub fn query_expression(
     let database_header = DatabaseHeader::try_from(buf)?;
 
     // read master table to find root_page_number
-    let table_records = tables(file)?;
+    let table_records = parse_schema_table(file)?;
     for rec in table_records.iter() {
         if let SerialType::String { length: _, content } = &rec.data[1] {
             if content == relation {
