@@ -29,20 +29,8 @@ fn main() -> Result<()> {
             dbinfo(&mut file)?;
         }
         Ok(Command::Tables) => {
-            let records = parse_schema_table(&mut file)?;
-            println!(
-                "{}",
-                records
-                    .iter()
-                    .map(|r| {
-                        if let SerialType::String { length: _, content } = &r.data[1] {
-                            content
-                        } else {
-                            ""
-                        }
-                    })
-                    .join(" ")
-            );
+            let relations = parse_schema_table(&mut file)?;
+            println!("{}", relations.iter().map(|r| r.name).join(" "));
         }
         Ok(Command::Query {
             expressions,

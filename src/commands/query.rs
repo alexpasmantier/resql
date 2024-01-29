@@ -15,9 +15,61 @@ use crate::parsing::{
     records::{Record, SerialType},
 };
 
-use super::tables::parse_schema_table;
+use super::tables::{load_relation_metadata, parse_schema_table, Relation};
+use super::Command;
 
-// TODO: refactor all this
+pub struct Row {
+    pub values: Vec<SerialType>,
+}
+
+pub struct QueryResult {
+    pub count: usize,
+    pub rows: Vec<Row>,
+}
+
+/// note this is kept really simple for now and only handles single expression count queries and
+/// regular sets of single-column expressions
+pub fn process_query(
+    file: &mut File,
+    expressions: &Vec<String>,
+    relation_name: &str,
+    filter: Option<(String, String)>,
+) -> Result<QueryResult> {
+    // read header to find out page size
+    let mut buf = [0; 100];
+    file.read_exact(&mut buf)?;
+    let database_header = DatabaseHeader::try_from(buf)?;
+
+    // read schema table to load the relevant relation metadata and go to the correct page
+    let relation = load_relation_metadata(file, relation_name)?;
+    let page_offset = (relation.root_page_number - 1) as u64 * database_header.page_size as u64;
+    file.seek(SeekFrom::Start(page_offset))?;
+
+    // parse page
+    let page_header = parse_btree_page_header(file)?;
+    let mut cell_offsets: Vec<u16> = Vec::new();
+    // gather cell offsets
+    for _ in 0..page_header.number_of_cells {
+        let mut buffer = [0; 2];
+        file.read_exact(&mut buffer)?;
+        cell_offsets.push(u16::from_be_bytes(buffer));
+    }
+    // parse each individual cell into a record
+    let records: Vec<Record> = cell_offsets
+        .iter()
+        // NOTE: why can't we collect this into a Vec<Record> ? (check out anyhow's documentation)
+        .map(|o| parse_record(file, SeekFrom::Start(page_offset + *o as u64)).unwrap())
+        .collect();
+
+    // TODO: finish this (filtering, count)
+
+    // placeholder
+    Ok(QueryResult {
+        count: 0,
+        rows: vec![],
+    })
+}
+
 pub fn query_count(
     file: &mut File,
     relation: &str,

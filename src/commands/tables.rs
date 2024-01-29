@@ -3,9 +3,11 @@ use std::io::prelude::*;
 
 use anyhow::{anyhow, Result};
 
+use crate::parsing::ddl::parse_column_names_from_ddl;
 use crate::parsing::page_header::parse_btree_page_header;
 use crate::parsing::records::{parse_record, Record, SerialType};
 
+#[derive(Debug)]
 pub enum RelationType {
     Table,
     Index,
@@ -35,13 +37,14 @@ impl TryFrom<&SerialType> for RelationType {
     }
 }
 
+#[derive(Debug)]
 pub struct Relation {
-    relation_type: RelationType,
-    name: String,
-    table_name: String,
-    root_page_number: i8,
+    pub relation_type: RelationType,
+    pub name: String,
+    pub table_name: String,
+    pub root_page_number: i8,
     // this could also hold the type but we're sticking to just the names for now
-    columns: Vec<String>,
+    pub columns: Vec<String>,
 }
 
 impl TryFrom<Record> for Relation {
@@ -76,12 +79,7 @@ impl TryFrom<Record> for Relation {
     }
 }
 
-fn parse_column_names_from_ddl(ddl_statement: &str) -> Result<Vec<String>> {
-    // try using nom for this
-    todo!()
-}
-
-pub fn parse_schema_table(file: &mut File) -> Result<Vec<Record>> {
+pub fn parse_schema_table(file: &mut File) -> Result<Vec<Relation>> {
     file.seek(std::io::SeekFrom::Start(100))?;
     let schema_page_header = parse_btree_page_header(file)?;
     // println!("schema page header {:?}", schema_page_header);
@@ -100,5 +98,18 @@ pub fn parse_schema_table(file: &mut File) -> Result<Vec<Record>> {
         file.seek(std::io::SeekFrom::Start(current_position))?;
     }
 
-    Ok(records)
+    let relations: Vec<Relation> = records
+        .iter()
+        .map(move |r| Relation::try_from(r.clone()).unwrap())
+        .collect();
+
+    Ok(relations)
+}
+
+pub fn load_relation_metadata(file: &mut File, relation_name: &str) -> Result<Relation> {
+    let relations = parse_schema_table(file)?;
+    match relations.iter().find(move |r| r.name == relation_name) {
+        Some(&relation) => Ok(relation),
+        None => Err(anyhow!("relation {} does not exist", relation_name)),
+    }
 }
