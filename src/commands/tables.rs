@@ -7,7 +7,7 @@ use crate::parsing::ddl::parse_column_names_from_ddl;
 use crate::parsing::page_header::parse_btree_page_header;
 use crate::parsing::records::{parse_record, Record, SerialType};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RelationType {
     Table,
     Index,
@@ -37,7 +37,7 @@ impl TryFrom<&SerialType> for RelationType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Relation {
     pub relation_type: RelationType,
     pub name: String,
@@ -106,10 +106,10 @@ pub fn parse_schema_table(file: &mut File) -> Result<Vec<Relation>> {
     Ok(relations)
 }
 
-pub fn load_relation_metadata(file: &mut File, relation_name: &str) -> Result<Relation> {
+pub fn load_relation(file: &mut File, relation_name: &str) -> Result<Relation> {
     let relations = parse_schema_table(file)?;
-    match relations.iter().find(move |r| r.name == relation_name) {
-        Some(&relation) => Ok(relation),
+    match relations.iter().find(|r| &r.name == relation_name) {
+        Some(&ref relation) => Ok(relation.clone()),
         None => Err(anyhow!("relation {} does not exist", relation_name)),
     }
 }

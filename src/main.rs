@@ -1,11 +1,10 @@
 use anyhow::{bail, Result};
 use commands::dbinfo::dbinfo;
-use commands::query::{query_count, query_expression};
+use commands::query::process_query;
 use commands::tables::parse_schema_table;
 use std::fs::File;
 
 use crate::commands::Command;
-use crate::parsing::records::SerialType;
 use itertools::Itertools;
 
 pub mod commands;
@@ -30,39 +29,41 @@ fn main() -> Result<()> {
         }
         Ok(Command::Tables) => {
             let relations = parse_schema_table(&mut file)?;
-            println!("{}", relations.iter().map(|r| r.name).join(" "));
+            println!("{}", relations.iter().map(|r| &r.name).join(" "));
         }
         Ok(Command::Query {
             expressions,
             relation,
             filter,
         }) => {
-            if expressions.len() == 1
-                && expressions
-                    .iter()
-                    .map(|e| e.to_uppercase())
-                    .contains(&String::from("COUNT(*)"))
-            {
-                let count = query_count(&mut file, &relation, filter)?;
-                println!("{}", count);
-            } else {
-                let results = query_expression(&mut file, &relation, expressions, filter)?;
-                for record in results.iter() {
-                    println!(
-                        "{}",
-                        record
-                            .iter()
-                            .map(|r| {
-                                if let SerialType::String { length: _, content } = r {
-                                    content
-                                } else {
-                                    ""
-                                }
-                            })
-                            .join("|")
-                    )
-                }
-            }
+            let result = process_query(&mut file, &expressions, &relation, filter);
+            dbg!(&result);
+            // if expressions.len() == 1
+            //     && expressions
+            //         .iter()
+            //         .map(|e| e.to_uppercase())
+            //         .contains(&String::from("COUNT(*)"))
+            // {
+            //     let count = query_count(&mut file, &relation, filter)?;
+            //     println!("{}", count);
+            // } else {
+            //     let results = query_expression(&mut file, &relation, expressions, filter)?;
+            //     for record in results.iter() {
+            //         println!(
+            //             "{}",
+            //             record
+            //                 .iter()
+            //                 .map(|r| {
+            //                     if let SerialType::String { length: _, content } = r {
+            //                         content
+            //                     } else {
+            //                         ""
+            //                     }
+            //                 })
+            //                 .join("|")
+            //         )
+            //     }
+            // }
         }
         _ => bail!("Missing or invalid command passed: {}", command),
     }

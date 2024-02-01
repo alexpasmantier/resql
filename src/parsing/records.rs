@@ -55,6 +55,8 @@ impl TryFrom<u64> for SerialType {
 pub struct Record {
     pub payload_size: u64,
     pub row_id: u64,
+    // TODO: refactor this so that serial types and the actual contained value class
+    // are different, and make the record hold a vector of that different class.
     pub data: Vec<SerialType>,
 }
 
