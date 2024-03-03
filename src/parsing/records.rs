@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::io::prelude::*;
 use std::{fs::File, io::SeekFrom};
 
@@ -20,6 +21,87 @@ pub enum SerialType {
     Reserved,
     Blob { length: u64, content: Vec<u8> },
     String { length: u64, content: String },
+}
+
+impl PartialEq for SerialType {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Null, _) | (Self::Reserved, _) | (_, Self::Null) | (_, Self::Reserved) => true,
+            // numbers
+            (SerialType::Int8(a), SerialType::Int8(b)) => a == b,
+            (SerialType::Int16(a), SerialType::Int16(b)) => a == b,
+            (SerialType::Int24(a), SerialType::Int24(b)) => a == b,
+            (SerialType::Int32(a), SerialType::Int32(b)) => a == b,
+            (SerialType::Int48(a), SerialType::Int48(b)) => a == b,
+            (SerialType::Int64(a), SerialType::Int64(b)) => a == b,
+            (SerialType::Float64(a), SerialType::Float64(b)) => a == b,
+            // boolean comparisons
+            (SerialType::IntZero, SerialType::IntZero) => true,
+            (SerialType::IntOne, SerialType::IntOne) => true,
+            // blobs and strings
+            (
+                SerialType::Blob {
+                    length: _,
+                    content: c1,
+                },
+                SerialType::Blob {
+                    length: _,
+                    content: c2,
+                },
+            ) => c1 == c2,
+            (
+                SerialType::String {
+                    length: _,
+                    content: c1,
+                },
+                SerialType::String {
+                    length: _,
+                    content: c2,
+                },
+            ) => c1 == c2,
+            _ => false,
+        }
+    }
+}
+impl PartialOrd for SerialType {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self, other) {
+            (Self::Null, _) | (Self::Reserved, _) | (_, Self::Null) | (_, Self::Reserved) => None,
+            // numbers
+            (SerialType::Int8(a), SerialType::Int8(b)) => a.partial_cmp(b),
+            (SerialType::Int16(a), SerialType::Int16(b)) => a.partial_cmp(b),
+            (SerialType::Int24(a), SerialType::Int24(b)) => a.partial_cmp(b),
+            (SerialType::Int32(a), SerialType::Int32(b)) => a.partial_cmp(b),
+            (SerialType::Int48(a), SerialType::Int48(b)) => a.partial_cmp(b),
+            (SerialType::Int64(a), SerialType::Int64(b)) => a.partial_cmp(b),
+            (SerialType::Float64(a), SerialType::Float64(b)) => a.partial_cmp(b),
+            // boolean comparisons
+            (SerialType::IntZero, SerialType::IntZero) => Some(Ordering::Equal),
+            (SerialType::IntOne, SerialType::IntOne) => Some(Ordering::Equal),
+            // blobs and strings
+            (
+                SerialType::Blob {
+                    length: _,
+                    content: c1,
+                },
+                SerialType::Blob {
+                    length: _,
+                    content: c2,
+                },
+            ) => c1.partial_cmp(c2),
+            (
+                SerialType::String {
+                    length: _,
+                    content: c1,
+                },
+                SerialType::String {
+                    length: _,
+                    content: c2,
+                },
+            ) => c1.partial_cmp(c2),
+            _ => None,
+        }
+    }
 }
 
 impl TryFrom<u64> for SerialType {

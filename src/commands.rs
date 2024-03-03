@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use itertools::any;
 use regex::Regex;
 
 pub mod dbinfo;
@@ -34,20 +35,23 @@ impl TryFrom<&str> for Command {
 }
 
 fn parse_query(str_query: &str) -> Result<Command> {
-    let re = Regex::new(r"(?i)select\s+(?P<expressions>[\w,\(\)\*\s]+)\s+from\s+(?P<relation>\w+)")
-        .unwrap();
-    let main_captures = re.captures(str_query).unwrap();
+    let query_re: Regex =
+        Regex::new(r"(?i)select\s+(?P<expressions>[\w,\(\)\*\s]+)\s+from\s+(?P<relation>\w+)")
+            .unwrap();
+    let query_cols_re: Regex = Regex::new(r"(?i)([\w\(\*\)]+)").unwrap();
+    // this is over-simplified for now and can be extended later
+    let query_filter_re: Regex =
+        Regex::new(r"(?i)\s+where\s+(?P<filtercol>\w+)\s*=\s*'(?P<filtervalue>\w+)'").unwrap();
 
-    let cols_re = Regex::new(r"(?i)([\w\(\*\)]+)").unwrap();
-    let expressions: Vec<String> = cols_re
+    let main_captures = query_re.captures(str_query).unwrap();
+
+    let expressions: Vec<String> = query_cols_re
         .captures_iter(&main_captures["expressions"])
         .map(|c| c[1].to_string())
         .collect();
 
-    let filter_re =
-        Regex::new(r"(?i)\s+where\s+(?P<filtercol>\w+)\s+=\s+'(?P<filtervalue>\w+)'").unwrap();
     let mut filter: Option<(String, String)> = None;
-    if let Some(filter_captures) = filter_re.captures(str_query) {
+    if let Some(filter_captures) = query_filter_re.captures(str_query) {
         let filtercol = filter_captures["filtercol"].to_string();
         let filtervalue = filter_captures["filtervalue"].to_string();
         filter = Some((filtercol, filtervalue));
@@ -58,4 +62,9 @@ fn parse_query(str_query: &str) -> Result<Command> {
         relation: main_captures["relation"].to_string(),
         filter,
     });
+}
+
+pub fn expressions_contain_count(expressions: &Vec<String>) -> bool {
+    let count_re: Regex = Regex::new(r"(?i)count\([\w*]+\)").unwrap();
+    any(expressions.iter(), |e| count_re.is_match(e))
 }

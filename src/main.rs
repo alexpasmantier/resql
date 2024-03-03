@@ -4,7 +4,8 @@ use commands::query::process_query;
 use commands::tables::parse_schema_table;
 use std::fs::File;
 
-use crate::commands::Command;
+use crate::commands::{expressions_contain_count, Command};
+use crate::parsing::records::SerialType;
 use itertools::Itertools;
 
 pub mod commands;
@@ -36,34 +37,25 @@ fn main() -> Result<()> {
             relation,
             filter,
         }) => {
-            let result = process_query(&mut file, &expressions, &relation, filter);
-            dbg!(&result);
-            // if expressions.len() == 1
-            //     && expressions
-            //         .iter()
-            //         .map(|e| e.to_uppercase())
-            //         .contains(&String::from("COUNT(*)"))
-            // {
-            //     let count = query_count(&mut file, &relation, filter)?;
-            //     println!("{}", count);
-            // } else {
-            //     let results = query_expression(&mut file, &relation, expressions, filter)?;
-            //     for record in results.iter() {
-            //         println!(
-            //             "{}",
-            //             record
-            //                 .iter()
-            //                 .map(|r| {
-            //                     if let SerialType::String { length: _, content } = r {
-            //                         content
-            //                     } else {
-            //                         ""
-            //                     }
-            //                 })
-            //                 .join("|")
-            //         )
-            //     }
-            // }
+            let result = process_query(&mut file, &expressions, &relation, filter)?;
+            if expressions_contain_count(&expressions) {
+                println!("{}", result.count)
+            } else if result.count > 0 {
+                for r in result.results.iter() {
+                    println!(
+                        "{}",
+                        r.iter()
+                            .map(|s| {
+                                if let SerialType::String { length: _, content } = s {
+                                    content
+                                } else {
+                                    ""
+                                }
+                            })
+                            .join("|")
+                    )
+                }
+            }
         }
         _ => bail!("Missing or invalid command passed: {}", command),
     }
