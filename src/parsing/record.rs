@@ -142,6 +142,7 @@ pub struct Record {
     pub data: Vec<SerialType>,
 }
 
+/// Attempts to parse a record (content cell) at the given file offset.
 pub fn parse_record(file: &mut File, record_offset: SeekFrom) -> Result<Record> {
     // content cell is at record_offset
     file.seek(record_offset)?;
@@ -177,6 +178,7 @@ pub fn parse_record(file: &mut File, record_offset: SeekFrom) -> Result<Record> 
     }
 }
 
+/// Attempts to parse a value of type `SerialType` at the current file offset.
 fn parse_serial_type(file: &mut File, serial_type: &SerialType) -> Result<SerialType> {
     match serial_type {
         SerialType::Null => Ok(SerialType::Null),

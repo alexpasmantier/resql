@@ -8,12 +8,10 @@ use std::{
 
 use anyhow::Result;
 
+use crate::parsing::database_header::parse_database_header;
 use crate::parsing::page_header::parse_btree_page_header;
-use crate::parsing::records::parse_record;
-use crate::parsing::{
-    database_header::DatabaseHeader,
-    records::{Record, SerialType},
-};
+use crate::parsing::record::parse_record;
+use crate::parsing::record::{Record, SerialType};
 
 use super::expressions_contain_count;
 use super::tables::{load_relation, Relation};
@@ -37,14 +35,11 @@ pub fn process_query(
     relation_name: &str,
     filter: Option<(String, String)>,
 ) -> Result<QueryResult> {
-    // read header to find out page size
-    let mut buf = [0; 100];
-    file.read_exact(&mut buf)?;
-    let database_header = DatabaseHeader::try_from(buf)?;
+    let database_header = parse_database_header(file)?;
 
     // read schema table to load the relevant relation metadata and go to the correct page
     let relation = load_relation(file, relation_name)?;
-    let page_offset = (relation.root_page_number - 1) as u64 * database_header.page_size as u64;
+    let page_offset = relation.root_page_offset(database_header.page_size);
     file.seek(SeekFrom::Start(page_offset))?;
 
     // parse page

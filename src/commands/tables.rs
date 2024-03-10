@@ -5,7 +5,7 @@ use anyhow::{anyhow, Result};
 
 use crate::parsing::ddl::parse_column_names_from_ddl;
 use crate::parsing::page_header::parse_btree_page_header;
-use crate::parsing::records::{parse_record, Record, SerialType};
+use crate::parsing::record::{parse_record, Record, SerialType};
 
 #[derive(Debug, Clone)]
 pub enum RelationType {
@@ -37,6 +37,7 @@ impl TryFrom<&SerialType> for RelationType {
     }
 }
 
+/// This represents a table, an index, a view, ...
 #[derive(Debug, Clone)]
 pub struct Relation {
     pub relation_type: RelationType,
@@ -46,7 +47,11 @@ pub struct Relation {
     // this could also hold the type but we're sticking to just the names for now
     pub columns: Vec<String>,
 }
-
+impl Relation {
+    pub fn root_page_offset(&self, page_size: u16) -> u64 {
+        (self.root_page_number - 1) as u64 * page_size as u64
+    }
+}
 impl TryFrom<Record> for Relation {
     type Error = anyhow::Error;
 
@@ -79,6 +84,7 @@ impl TryFrom<Record> for Relation {
     }
 }
 
+/// Parses the main schema table in order to get every relation the database currently holds
 pub fn parse_schema_table(file: &mut File) -> Result<Vec<Relation>> {
     file.seek(std::io::SeekFrom::Start(100))?;
     let schema_page_header = parse_btree_page_header(file)?;
@@ -106,6 +112,7 @@ pub fn parse_schema_table(file: &mut File) -> Result<Vec<Relation>> {
     Ok(relations)
 }
 
+/// Parses the main schema table and tries to extract the relevant relation from it
 pub fn load_relation(file: &mut File, relation_name: &str) -> Result<Relation> {
     let relations = parse_schema_table(file)?;
     match relations.iter().find(|r| &r.name == relation_name) {

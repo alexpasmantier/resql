@@ -1,5 +1,8 @@
 use anyhow::anyhow;
+use anyhow::Result;
 use nom::AsChar;
+use std::fs::File;
+use std::io::Read;
 
 const MAGIC_STRING: &str = "SQLite format 3\0";
 
@@ -113,4 +116,10 @@ fn validate_header(header: &DatabaseHeader) -> bool {
         return false;
     }
     return true;
+}
+
+pub fn parse_database_header(file: &mut File) -> Result<DatabaseHeader> {
+    let mut buf = [0; 100];
+    file.read_exact(&mut buf)?;
+    DatabaseHeader::try_from(buf)
 }

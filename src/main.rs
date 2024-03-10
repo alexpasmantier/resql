@@ -5,7 +5,7 @@ use commands::tables::parse_schema_table;
 use std::fs::File;
 
 use crate::commands::{expressions_contain_count, Command};
-use crate::parsing::records::SerialType;
+use crate::parsing::record::SerialType;
 use itertools::Itertools;
 
 pub mod commands;
