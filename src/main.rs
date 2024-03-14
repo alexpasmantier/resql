@@ -9,6 +9,7 @@ use crate::parsing::record::SerialType;
 use itertools::Itertools;
 
 pub mod commands;
+pub mod database;
 pub mod parsing;
 
 fn main() -> Result<()> {

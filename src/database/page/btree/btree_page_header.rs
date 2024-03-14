@@ -46,6 +46,7 @@ pub struct BTreePageHeader {
     pub right_most_pointer: Option<u32>,
 }
 
+// TODO: this will now need to take a Vec<u8> instead of a file handle
 pub fn parse_btree_page_header(file: &mut File) -> Result<BTreePageHeader> {
     // read the first 8 bytes
     let mut buffer = [0; 8];
