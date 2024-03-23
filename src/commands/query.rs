@@ -8,8 +8,8 @@ use std::{
 
 use anyhow::Result;
 
-use crate::parsing::database_header::parse_database_header;
-use crate::parsing::page_header::parse_btree_page_header;
+use crate::database::header::parse_database_header;
+use crate::database::page::btree::btree_page_header::parse_btree_page_header;
 use crate::parsing::record::parse_record;
 use crate::parsing::record::{Record, SerialType};
 
@@ -43,36 +43,37 @@ pub fn process_query(
     file.seek(SeekFrom::Start(page_offset))?;
 
     // parse page
-    let page_header = parse_btree_page_header(file)?;
-    let mut cell_offsets: Vec<u16> = Vec::new();
-    // gather cell offsets
-    for _ in 0..page_header.number_of_cells {
-        let mut buffer = [0; 2];
-        file.read_exact(&mut buffer)?;
-        cell_offsets.push(u16::from_be_bytes(buffer));
-    }
-    // parse each individual cell into a row
-    let records: Vec<Record> = cell_offsets
-        .iter()
-        .map(|o| parse_record(file, SeekFrom::Start(page_offset + *o as u64)).unwrap())
-        .collect();
-    let rows: Vec<Row> = records
-        .iter()
-        .map(|r| convert_record_to_row(r, &relation))
-        .collect();
-
-    // filter rows based on where clause
-    let filtered_rows = filter_rows_based_on_where_clause(&rows, filter);
-
-    // filter expressions
-    let results =
-        filter_row_expressions_based_on_select_clause(&filtered_rows, expressions, &relation);
-
-    // placeholder
-    Ok(QueryResult {
-        count: rows.len(),
-        results,
-    })
+    todo!();
+    // let page_header = parse_btree_page_header(file)?;
+    // let mut cell_offsets: Vec<u16> = Vec::new();
+    // // gather cell offsets
+    // for _ in 0..page_header.number_of_cells {
+    //     let mut buffer = [0; 2];
+    //     file.read_exact(&mut buffer)?;
+    //     cell_offsets.push(u16::from_be_bytes(buffer));
+    // }
+    // // parse each individual cell into a row
+    // let records: Vec<Record> = cell_offsets
+    //     .iter()
+    //     .map(|o| parse_record(file, SeekFrom::Start(page_offset + *o as u64)).unwrap())
+    //     .collect();
+    // let rows: Vec<Row> = records
+    //     .iter()
+    //     .map(|r| convert_record_to_row(r, &relation))
+    //     .collect();
+    //
+    // // filter rows based on where clause
+    // let filtered_rows = filter_rows_based_on_where_clause(&rows, filter);
+    //
+    // // filter expressions
+    // let results =
+    //     filter_row_expressions_based_on_select_clause(&filtered_rows, expressions, &relation);
+    //
+    // // placeholder
+    // Ok(QueryResult {
+    //     count: rows.len(),
+    //     results,
+    // })
 }
 
 fn convert_record_to_row(record: &Record, relation: &Relation) -> Row {

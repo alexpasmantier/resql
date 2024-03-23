@@ -1,30 +1,6 @@
-use std::{fs::File, io::Read};
+use anyhow::Result;
 
-use anyhow::{anyhow, Error, Result};
-
-#[derive(Debug)]
-pub enum BtreePageType {
-    InteriorIndex,
-    InteriorTable,
-    LeafIndex,
-    LeafTable,
-}
-impl TryFrom<u8> for BtreePageType {
-    type Error = Error;
-
-    fn try_from(value: u8) -> Result<Self> {
-        match value {
-            2 => Ok(BtreePageType::InteriorIndex),
-            5 => Ok(BtreePageType::InteriorTable),
-            10 => Ok(BtreePageType::LeafIndex),
-            13 => Ok(BtreePageType::LeafTable),
-            i => Err(anyhow!(
-                "Value {} does not correspond to any valid page type",
-                i
-            )),
-        }
-    }
-}
+use super::btree_page::BtreePageType;
 
 #[derive(Debug)]
 pub struct BTreePageHeader {
@@ -46,24 +22,22 @@ pub struct BTreePageHeader {
     pub right_most_pointer: Option<u32>,
 }
 
-// TODO: this will now need to take a Vec<u8> instead of a file handle
-pub fn parse_btree_page_header(file: &mut File) -> Result<BTreePageHeader> {
+pub fn parse_btree_page_header(hypothetical_header: &[u8; 12]) -> Result<BTreePageHeader> {
     // read the first 8 bytes
-    let mut buffer = [0; 8];
-    file.read_exact(&mut buffer)?;
-    let page_type = BtreePageType::try_from(u8::from_be_bytes([buffer[0]]))?;
-    let first_freeblock_offset = u16::from_be_bytes(buffer[1..3].try_into().unwrap());
-    let number_of_cells = u16::from_be_bytes(buffer[3..5].try_into().unwrap());
-    let cell_content_area_offset = u16::from_be_bytes(buffer[5..7].try_into().unwrap());
-    let number_of_fragmented_free_bytes = u8::from_be_bytes([buffer[7]]);
+    let page_type = BtreePageType::try_from(u8::from_be_bytes([hypothetical_header[0]]))?;
+    let first_freeblock_offset = u16::from_be_bytes(hypothetical_header[1..3].try_into().unwrap());
+    let number_of_cells = u16::from_be_bytes(hypothetical_header[3..5].try_into().unwrap());
+    let cell_content_area_offset =
+        u16::from_be_bytes(hypothetical_header[5..7].try_into().unwrap());
+    let number_of_fragmented_free_bytes = u8::from_be_bytes([hypothetical_header[7]]);
     let right_most_pointer: Option<u32>;
 
     match page_type {
         BtreePageType::InteriorIndex | BtreePageType::InteriorTable => {
             // read the 4 extra bytes and produce value
-            let mut buffer = [0; 4];
-            file.read_exact(&mut buffer)?;
-            right_most_pointer = Some(u32::from_be_bytes(buffer));
+            right_most_pointer = Some(u32::from_be_bytes(
+                hypothetical_header[8..12].try_into().unwrap(),
+            ));
         }
         _ => {
             // set value to None

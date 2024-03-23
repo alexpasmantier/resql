@@ -1,15 +1,16 @@
-use crate::parsing::database_header::{DatabaseHeader, DATABASE_HEADER_SIZE};
 use anyhow::Result;
 use std::io::SeekFrom;
 
+use self::header::{DatabaseHeader, DATABASE_HEADER_SIZE};
 use self::io::SQLiteFile;
 use self::page::{
     btree::btree_page::BTreePage, freelist_page::FreeListPage, lockbyte_page::LockBytePage,
     payload_overflow_page::PayloadOverflowPage, pointer_map_page::PointerMapPage, Page, PageType,
 };
 
+pub mod header;
 mod io;
-mod page;
+pub mod page;
 
 pub struct Database {
     db_file: SQLiteFile,
@@ -17,16 +18,20 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn from_file(path: &str) -> Result<Database> {
+    pub fn init_from_file(path: &str) -> Result<Database> {
         let mut db_file = SQLiteFile::new(path)?;
         let header_bytes = db_file.read_exact_at(DATABASE_HEADER_SIZE, SeekFrom::Start(0))?;
         let header = DatabaseHeader::try_from(header_bytes)?;
         Ok(Database { db_file, header })
     }
 
-    fn read_page(&self, page_number: usize, page_type: PageType) -> Result<Page> {
-        let offset: SeekFrom =
-            SeekFrom::Start((page_number as u64 - 1) * self.header.page_size as u64);
+    fn read_page(&mut self, page_number: usize, page_type: PageType) -> Result<Page> {
+        let offset: SeekFrom;
+        if page_number == 1 {
+            offset = SeekFrom::Start(DATABASE_HEADER_SIZE as u64);
+        } else {
+            offset = SeekFrom::Start((page_number as u64 - 1) * self.header.page_size as u64);
+        }
         let page_contents: Vec<u8> = self
             .db_file
             .read_exact_at(self.header.page_size as usize, offset)?;
@@ -54,7 +59,7 @@ impl Database {
         }
     }
 
-    fn write_page(&self, page_contents: Vec<u8>, page_number: usize) -> Result<usize> {
+    fn write_page(&mut self, page_contents: Vec<u8>, page_number: usize) -> Result<usize> {
         let offset: SeekFrom =
             SeekFrom::Start((page_number as u64 - 1) * self.header.page_size as u64);
         // TODO: write a copy of that page into the rollback journal before doing any modifications

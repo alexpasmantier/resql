@@ -3,8 +3,8 @@ use std::io::prelude::*;
 
 use anyhow::{anyhow, Result};
 
+use crate::database::page::btree::btree_page_header::parse_btree_page_header;
 use crate::parsing::ddl::parse_column_names_from_ddl;
-use crate::parsing::page_header::parse_btree_page_header;
 use crate::parsing::record::{parse_record, Record, SerialType};
 
 #[derive(Debug, Clone)]
@@ -87,29 +87,30 @@ impl TryFrom<Record> for Relation {
 /// Parses the main schema table in order to get every relation the database currently holds
 pub fn parse_schema_table(file: &mut File) -> Result<Vec<Relation>> {
     file.seek(std::io::SeekFrom::Start(100))?;
-    let schema_page_header = parse_btree_page_header(file)?;
-    // println!("schema page header {:?}", schema_page_header);
-
-    let _table_names: Vec<String> = Vec::new();
-    let mut records: Vec<Record> = Vec::new();
-
-    for _ in 0..schema_page_header.number_of_cells {
-        let mut buffer = [0; 2];
-        file.read_exact(&mut buffer)?;
-        // save current position
-        let current_position = file.stream_position()?;
-        let cell_content_offset = u16::from_be_bytes(buffer);
-        let record = parse_record(file, std::io::SeekFrom::Start(cell_content_offset as u64))?;
-        records.push(record);
-        file.seek(std::io::SeekFrom::Start(current_position))?;
-    }
-
-    let relations: Vec<Relation> = records
-        .iter()
-        .map(move |r| Relation::try_from(r.clone()).unwrap())
-        .collect();
-
-    Ok(relations)
+    todo!();
+    // let schema_page_header = parse_btree_page_header(file)?;
+    // // println!("schema page header {:?}", schema_page_header);
+    //
+    // let _table_names: Vec<String> = Vec::new();
+    // let mut records: Vec<Record> = Vec::new();
+    //
+    // for _ in 0..schema_page_header.number_of_cells {
+    //     let mut buffer = [0; 2];
+    //     file.read_exact(&mut buffer)?;
+    //     // save current position
+    //     let current_position = file.stream_position()?;
+    //     let cell_content_offset = u16::from_be_bytes(buffer);
+    //     let record = parse_record(file, std::io::SeekFrom::Start(cell_content_offset as u64))?;
+    //     records.push(record);
+    //     file.seek(std::io::SeekFrom::Start(current_position))?;
+    // }
+    //
+    // let relations: Vec<Relation> = records
+    //     .iter()
+    //     .map(move |r| Relation::try_from(r.clone()).unwrap())
+    //     .collect();
+    //
+    // Ok(relations)
 }
 
 /// Parses the main schema table and tries to extract the relevant relation from it
