@@ -1,21 +1,29 @@
+use anyhow::{anyhow, Result};
 use nom::{number::complete::be_u32, IResult};
 
 use crate::parsing::utils::take_varint;
 
+pub enum CellType {
+    LeafTable(LeafTableCell),
+    InteriorTable(InteriorTableCell),
+    LeafIndex(LeafIndexCell),
+    InteriorIndex(InteriorIndexCell),
+}
+
 /// Table B-Tree Leaf Cell (header 0x0d)
-pub struct TableBTreeLeafCell {
+pub struct LeafTableCell {
     /// A varint which is the total number of bytes of payload, including any overflow
     payload_size: u64,
     /// A varint which is the integer key, a.k.a. "rowid"
     key: u64,
     /// The initial portion of the payload that does not spill to overflow pages.
-    local_payload: Vec<u8>,
+    payload: Vec<u8>,
     /// A 4-byte big-endian integer page number for the first page of the overflow page list - omitted if all payload fits on the b-tree page.
-    first_overflow_page_number: u32,
+    first_overflow_page_number: Option<u32>,
 }
 
 /// Table B-Tree Interior Cell (header 0x05):
-pub struct TableBTreeInteriorCell {
+pub struct InteriorTableCell {
     /// A 4-byte big-endian page number which is the left child pointer.
     left_child_pointer: u32,
     /// A varint which is the integer key, a.k.a. "rowid"
@@ -23,17 +31,17 @@ pub struct TableBTreeInteriorCell {
 }
 
 /// Index B-Tree Leaf Cell (header 0x0a):
-pub struct IndexBTreeLeafCell {
+pub struct LeafIndexCell {
     /// A varint which is the total number of bytes of key payload, including any overflow
     payload_size: u64,
     /// The initial portion of the payload that does not spill to overflow pages.
-    local_payload: Vec<u8>,
+    payload: Vec<u8>,
     /// A 4-byte big-endian integer page number for the first page of the overflow page list - omitted if all payload fits on the b-tree page.
-    first_overflow_page_number: u32,
+    first_overflow_page_number: Option<u32>,
 }
 
 /// Index B-Tree Interior Cell (header 0x02):
-pub struct IndexBTreeInteriorCell {
+pub struct InteriorIndexCell {
     /// A 4-byte big-endian page number which is the left child pointer.
     left_child_pointer: u32,
     /// A varint which is the total number of bytes of key payload, including any overflow
@@ -41,7 +49,7 @@ pub struct IndexBTreeInteriorCell {
     /// The initial portion of the payload that does not spill to overflow pages.
     payload: Vec<u8>,
     /// A 4-byte big-endian integer page number for the first page of the overflow page list - omitted if all payload fits on the b-tree page.
-    first_overflow_page_number: u32,
+    first_overflow_page_number: Option<u32>,
 }
 
 // varint
@@ -64,15 +72,66 @@ fn parse_first_overflow_page_number(input: &[u8]) -> IResult<&[u8], u32> {
     be_u32(input)
 }
 
-
-// TODO: 2024-03-23: this is where I left off 
-// NOTE: is this really a good idea? does it bring anything? how is FromStr implemented?
-pub trait ParseFrom {
-    fn parse_from(data: &[u8]) -> IResult<&[u8], Self>
-    where Self: ;
+pub fn parse_leaf_table_cell(input: &[u8]) -> Result<CellType> {
+    let (input, payload_size) = parse_payload_size(input)?;
+    let (input, key) = parse_rowid(input)?;
+    // overflow is not handled for the moment
+    if let Some(payload) = input.get(..payload_size as usize) {
+        Ok(CellType::LeafTable(LeafTableCell {
+            payload_size,
+            key,
+            payload: payload.to_vec(),
+            first_overflow_page_number: None,
+        }))
+    } else {
+        Err(anyhow!(
+            "Couldn't read enough bytes from page to extract the entire payload.\
+            This might be a case of payload overflow, for which the logic isn't yet implemented."
+        ))
+    }
 }
 
+pub fn parse_interior_table_cell(input: &[u8]) -> Result<CellType> {
+    let (input, left_child_pointer) = parse_left_child_pointer(input)?;
+    let (input, key) = parse_rowid(input)?;
+    Ok(CellType::InteriorTable(InteriorTableCell {
+        left_child_pointer,
+        key,
+    }))
+}
 
-impl TableBTreeLeafCell {
-    pub fn parse_from()
+pub fn parse_leaf_index_cell(input: &[u8]) -> Result<CellType> {
+    let (input, payload_size) = parse_payload_size(input)?;
+    // overflow is not handled for the moment
+    if let Some(payload) = input.get(..payload_size as usize) {
+        Ok(CellType::LeafIndex(LeafIndexCell {
+            payload_size,
+            payload: payload.to_vec(),
+            first_overflow_page_number: None,
+        }))
+    } else {
+        Err(anyhow!(
+            "Couldn't read enough bytes from page to extract the entire payload.\
+            This might be a case of payload overflow, for which the logic isn't yet implemented."
+        ))
+    }
+}
+
+pub fn parse_interior_index_cell(input: &[u8]) -> Result<CellType> {
+    let (input, left_child_pointer) = parse_left_child_pointer(input)?;
+    let (input, payload_size) = parse_payload_size(input)?;
+    // overflow is not handled for the moment
+    if let Some(payload) = input.get(..payload_size as usize) {
+        Ok(CellType::InteriorIndex(InteriorIndexCell {
+            left_child_pointer,
+            payload_size,
+            payload: payload.to_vec(),
+            first_overflow_page_number: None,
+        }))
+    } else {
+        Err(anyhow!(
+            "Couldn't read enough bytes from page to extract the entire payload.\
+            This might be a case of payload overflow, for which the logic isn't yet implemented."
+        ))
+    }
 }
