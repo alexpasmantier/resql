@@ -17,7 +17,7 @@ pub struct LeafTableCell {
     /// A varint which is the integer key, a.k.a. "rowid"
     key: u64,
     /// The initial portion of the payload that does not spill to overflow pages.
-    payload: Vec<u8>,
+    payload: Payload,
     /// A 4-byte big-endian integer page number for the first page of the overflow page list - omitted if all payload fits on the b-tree page.
     first_overflow_page_number: Option<u32>,
 }
@@ -35,7 +35,7 @@ pub struct LeafIndexCell {
     /// A varint which is the total number of bytes of key payload, including any overflow
     payload_size: u64,
     /// The initial portion of the payload that does not spill to overflow pages.
-    payload: Vec<u8>,
+    payload: Payload,
     /// A 4-byte big-endian integer page number for the first page of the overflow page list - omitted if all payload fits on the b-tree page.
     first_overflow_page_number: Option<u32>,
 }
@@ -47,7 +47,7 @@ pub struct InteriorIndexCell {
     /// A varint which is the total number of bytes of key payload, including any overflow
     payload_size: u64,
     /// The initial portion of the payload that does not spill to overflow pages.
-    payload: Vec<u8>,
+    payload: Payload,
     /// A 4-byte big-endian integer page number for the first page of the overflow page list - omitted if all payload fits on the b-tree page.
     first_overflow_page_number: Option<u32>,
 }
@@ -76,11 +76,13 @@ pub fn parse_leaf_table_cell(input: &[u8]) -> Result<CellType> {
     let (input, payload_size) = parse_payload_size(input)?;
     let (input, key) = parse_rowid(input)?;
     // overflow is not handled for the moment
-    if let Some(payload) = input.get(..payload_size as usize) {
+    if let Some(payload_content) = input.get(..payload_size as usize) {
         Ok(CellType::LeafTable(LeafTableCell {
             payload_size,
             key,
-            payload: payload.to_vec(),
+            payload: Payload {
+                content: payload_content.to_vec(),
+            },
             first_overflow_page_number: None,
         }))
     } else {
@@ -103,10 +105,12 @@ pub fn parse_interior_table_cell(input: &[u8]) -> Result<CellType> {
 pub fn parse_leaf_index_cell(input: &[u8]) -> Result<CellType> {
     let (input, payload_size) = parse_payload_size(input)?;
     // overflow is not handled for the moment
-    if let Some(payload) = input.get(..payload_size as usize) {
+    if let Some(payload_content) = input.get(..payload_size as usize) {
         Ok(CellType::LeafIndex(LeafIndexCell {
             payload_size,
-            payload: payload.to_vec(),
+            payload: Payload {
+                content: payload_content.to_vec(),
+            },
             first_overflow_page_number: None,
         }))
     } else {
@@ -121,11 +125,13 @@ pub fn parse_interior_index_cell(input: &[u8]) -> Result<CellType> {
     let (input, left_child_pointer) = parse_left_child_pointer(input)?;
     let (input, payload_size) = parse_payload_size(input)?;
     // overflow is not handled for the moment
-    if let Some(payload) = input.get(..payload_size as usize) {
+    if let Some(payload_content) = input.get(..payload_size as usize) {
         Ok(CellType::InteriorIndex(InteriorIndexCell {
             left_child_pointer,
             payload_size,
-            payload: payload.to_vec(),
+            payload: Payload {
+                content: payload_content.to_vec(),
+            },
             first_overflow_page_number: None,
         }))
     } else {
@@ -134,4 +140,13 @@ pub fn parse_interior_index_cell(input: &[u8]) -> Result<CellType> {
             This might be a case of payload overflow, for which the logic isn't yet implemented."
         ))
     }
+}
+
+/// a cell's payload section
+struct Payload {
+    content: Vec<u8>,
+}
+
+impl Payload {
+    pub fn parse_record() {}
 }
