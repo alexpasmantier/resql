@@ -105,7 +105,7 @@ impl PartialOrd for Value {
     }
 }
 
-fn parse_value<'a>(data: &'a [u8], serial_type: &SerialType) -> IResult<&'a [u8], Value> {
+pub fn parse_value<'a>(data: &'a [u8], serial_type: &SerialType) -> IResult<&'a [u8], Value> {
     match serial_type {
         SerialType::Null => Ok((data, Value::Null)),
         SerialType::Int8 => {

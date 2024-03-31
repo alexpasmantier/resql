@@ -143,10 +143,6 @@ pub fn parse_interior_index_cell(input: &[u8]) -> Result<CellType> {
 }
 
 /// a cell's payload section
-struct Payload {
-    content: Vec<u8>,
-}
-
-impl Payload {
-    pub fn parse_record() {}
+pub struct Payload {
+    pub content: Vec<u8>,
 }

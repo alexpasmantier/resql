@@ -3,13 +3,13 @@ use std::ops::Range;
 use anyhow::{anyhow, Context, Error, Result};
 use itertools::Itertools;
 
-use crate::database::page::btree::btree_page_data::{
+use crate::database::page::btree::data::{
     parse_interior_index_cell, parse_interior_table_cell, parse_leaf_index_cell,
     parse_leaf_table_cell,
 };
 
-use super::btree_page_data::CellType;
-use super::btree_page_header::{parse_btree_page_header, BTreePageHeader};
+use super::data::CellType;
+use super::header::{parse_btree_page_header, BTreePageHeader};
 
 #[derive(Debug)]
 pub enum BTreePageType {
@@ -100,6 +100,3 @@ fn parse_cells(
         })
         .collect_vec())
 }
-
-// TODO: we will then need some query handling logic (maybe not in this module) that
-// iterates across pages and indexes

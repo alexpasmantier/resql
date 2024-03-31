@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use super::btree_page::BTreePageType;
+use super::page::BTreePageType;
 
 #[derive(Debug)]
 pub struct BTreePageHeader {

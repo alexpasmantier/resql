@@ -4,7 +4,7 @@ use std::io::SeekFrom;
 use self::header::{DatabaseHeader, DATABASE_HEADER_SIZE};
 use self::io::SQLiteFile;
 use self::page::{
-    btree::btree_page::BTreePage, freelist_page::FreeListPage, lockbyte_page::LockBytePage,
+    btree::page::BTreePage, freelist_page::FreeListPage, lockbyte_page::LockBytePage,
     payload_overflow_page::PayloadOverflowPage, pointer_map_page::PointerMapPage, Page, PageType,
 };
 
