@@ -38,8 +38,7 @@ impl TryFrom<u8> for BTreePageType {
 // FIXME: this looks pretty shitty and should probably be refactored into an enum and several
 // variants
 pub struct BTreePage {
-    btree_type: BTreePageType,
-    page_header: BTreePageHeader,
+    pub page_header: BTreePageHeader,
     cells: Vec<CellType>,
 }
 
@@ -71,7 +70,6 @@ impl TryFrom<Vec<u8>> for BTreePage {
         let cells = parse_cells(&value, cell_pointer_array, cell_parser)?;
 
         Ok(BTreePage {
-            btree_type: header.page_type,
             page_header: header,
             cells,
         })

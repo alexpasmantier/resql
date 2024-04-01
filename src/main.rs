@@ -8,11 +8,19 @@ use crate::commands::{expressions_contain_count, Command};
 use crate::parsing::record::SerialType;
 use itertools::Itertools;
 
+pub mod cli;
 pub mod commands;
 pub mod database;
+pub mod engine;
 pub mod parsing;
+pub mod sql;
 
 fn main() -> Result<()> {
+    let command = cli::parse_command()?;
+    engine::process_command(command)
+}
+
+fn old_main() -> Result<()> {
     // Parse arguments
     let args = std::env::args().collect::<Vec<_>>();
     match args.len() {

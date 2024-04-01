@@ -4,7 +4,7 @@ use std::{fs::File, io::SeekFrom};
 
 use anyhow::{anyhow, Result};
 
-use super::utils::parse_varint;
+use super::utils::take_varint;
 
 #[derive(Debug, Clone)]
 pub enum SerialType {
@@ -147,14 +147,14 @@ pub fn parse_record(file: &mut File, record_offset: SeekFrom) -> Result<Record> 
     // content cell is at record_offset
     file.seek(record_offset)?;
     // parse payload_size, row_id, cell header
-    let (payload_size, _) = parse_varint(file)?;
-    let (row_id, _) = parse_varint(file)?;
-    let (header_size, varint_size) = parse_varint(file)?;
+    let (payload_size, _) = take_varint(file)?;
+    let (row_id, _) = take_varint(file)?;
+    let (header_size, varint_size) = take_varint(file)?;
 
     let mut serial_types: Vec<SerialType> = Vec::new();
     let mut offset = 0;
     loop {
-        let (varint, size) = parse_varint(file)?;
+        let (varint, size) = take_varint(file)?;
         serial_types.push(SerialType::try_from(varint)?);
         offset += size;
         if offset as u64 == header_size - varint_size as u64 {

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, bail, Result};
 use std::io::SeekFrom;
 
 use self::header::{DatabaseHeader, DATABASE_HEADER_SIZE};
@@ -14,7 +14,28 @@ pub mod page;
 
 pub struct Database {
     db_file: SQLiteFile,
-    header: DatabaseHeader,
+    pub header: DatabaseHeader,
+}
+
+pub struct ObjectInformation {
+    pub object_type: ObjectType,
+    pub object_name: String,
+    pub table_name: Option<String>,
+    pub root_page: u64,
+    pub object_ddl: String,
+}
+
+pub enum ObjectType {
+    Table,
+    Index,
+    View,
+    Trigger,
+}
+
+pub struct TableInformation {
+    pub table_name: String,
+    pub root_page: u64,
+    pub ddl: String,
 }
 
 impl Database {
@@ -25,7 +46,7 @@ impl Database {
         Ok(Database { db_file, header })
     }
 
-    fn read_page(&mut self, page_number: usize, page_type: PageType) -> Result<Page> {
+    fn read_page(&mut self, page_number: u64, page_type: PageType) -> Result<Page> {
         let offset: SeekFrom;
         if page_number == 1 {
             offset = SeekFrom::Start(DATABASE_HEADER_SIZE as u64);
@@ -59,11 +80,65 @@ impl Database {
         }
     }
 
-    fn write_page(&mut self, page_contents: Vec<u8>, page_number: usize) -> Result<usize> {
-        let offset: SeekFrom =
-            SeekFrom::Start((page_number as u64 - 1) * self.header.page_size as u64);
+    fn write_page(&mut self, page_contents: Vec<u8>, page_number: u64) -> Result<usize> {
+        let offset: SeekFrom = SeekFrom::Start((page_number - 1) * self.header.page_size as u64);
         // TODO: write a copy of that page into the rollback journal before doing any modifications
         // (unless page is a freelist leaf page)
         self.db_file.write_at(page_contents, offset)
+    }
+
+    pub fn list_objects(&mut self) -> Result<Vec<ObjectInformation>> {
+        if let Ok(page::Page::BTree(table_schema_page)) = self.read_page(0, PageType::BTree) {
+            todo!()
+        } else {
+            todo!()
+        }
+    }
+
+    pub fn list_tables(&mut self) -> Result<Vec<TableInformation>> {
+        todo!()
+    }
+
+    fn traverse_btree(&mut self, root_page_number: u64) -> Result<()> {
+        if let Ok(page::Page::BTree(root_page)) =
+            self.read_page(root_page_number, page::PageType::BTree)
+        {
+            match root_page.page_header.page_type {
+                page::btree::page::BTreePageType::LeafIndex
+                | page::btree::page::BTreePageType::InteriorIndex => {
+                    self.traverse_btree_index(root_page)
+                }
+                page::btree::page::BTreePageType::LeafTable
+                | page::btree::page::BTreePageType::InteriorTable => {
+                    self.traverse_btree_table(root_page)
+                }
+            }
+        } else {
+            Err(anyhow!("something went wrong"))
+        }
+    }
+
+    fn traverse_btree_index(&mut self, root_page: page::btree::page::BTreePage) -> Result<()> {
+        todo!()
+    }
+
+    fn traverse_btree_table(&mut self, root_page: page::btree::page::BTreePage) -> Result<()> {
+        todo!("finish this");
+        match root_page.page_header.page_type {
+            page::btree::page::BTreePageType::LeafTable => {
+                todo!("simply parse page and return it or do something with it")
+            }
+            page::btree::page::BTreePageType::InteriorTable => {
+                todo!("traverse interior tables, pushing pointers to page numbers onto a stack etc")
+            }
+            _ => bail!(
+                "Wrong BTreePageType; expected LeafTable or InteriorTable, got {:?}",
+                root_page.page_header.page_type
+            ),
+        }
+        // let leaf_pages: Vec<page::btree::page::BTreePage> = Vec::new();
+        // let page_pointer_stack: Vec<u32> = vec![root_page.page_header];
+
+        Ok(())
     }
 }
