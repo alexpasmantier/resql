@@ -9,6 +9,8 @@ pub enum CellType {
     LeafIndex(LeafIndexCell),
     InteriorIndex(InteriorIndexCell),
 }
+pub mod record;
+pub mod serial_types;
 
 /// Table B-Tree Leaf Cell (header 0x0d)
 pub struct LeafTableCell {

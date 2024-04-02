@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 use itertools::any;
 use regex::Regex;
 
-pub mod dbinfo;
 pub mod query;
 pub mod tables;
 

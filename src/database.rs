@@ -32,10 +32,21 @@ pub enum ObjectType {
     Trigger,
 }
 
+// NOTE: this might not be useful (maybe we return a simple row instead)
 pub struct TableInformation {
     pub table_name: String,
     pub root_page: u64,
     pub ddl: String,
+}
+
+pub struct Row {
+    pub rowid: u64,
+    pub columns: Vec<Column>,
+}
+
+pub struct Column {
+    pub name: String,
+    pub value: page::btree::data::serial_types::Value,
 }
 
 impl Database {
@@ -123,10 +134,10 @@ impl Database {
     }
 
     fn traverse_btree_table(&mut self, root_page: page::btree::page::BTreePage) -> Result<()> {
-        todo!("finish this");
         match root_page.page_header.page_type {
             page::btree::page::BTreePageType::LeafTable => {
-                todo!("simply parse page and return it or do something with it")
+                // do we really have the correct data structures for this?
+                todo!("finish this");
             }
             page::btree::page::BTreePageType::InteriorTable => {
                 todo!("traverse interior tables, pushing pointers to page numbers onto a stack etc")
@@ -138,7 +149,5 @@ impl Database {
         }
         // let leaf_pages: Vec<page::btree::page::BTreePage> = Vec::new();
         // let page_pointer_stack: Vec<u32> = vec![root_page.page_header];
-
-        Ok(())
     }
 }

@@ -9,8 +9,6 @@ use std::{
 use anyhow::Result;
 
 use crate::database::header::parse_database_header;
-use crate::database::page::btree::btree_page_header::parse_btree_page_header;
-use crate::parsing::record::parse_record;
 use crate::parsing::record::{Record, SerialType};
 
 use super::expressions_contain_count;

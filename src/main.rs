@@ -1,11 +1,9 @@
 use anyhow::{bail, Result};
-use commands::dbinfo::dbinfo;
 use commands::query::process_query;
 use commands::tables::parse_schema_table;
 use std::fs::File;
 
 use crate::commands::{expressions_contain_count, Command};
-use crate::parsing::record::SerialType;
 use itertools::Itertools;
 
 pub mod cli;
@@ -35,7 +33,7 @@ fn old_main() -> Result<()> {
 
     match Command::try_from(command.as_str()) {
         Ok(Command::DBInfo) => {
-            dbinfo(&mut file)?;
+            // dbinfo(&mut file)?;
         }
         Ok(Command::Tables) => {
             let relations = parse_schema_table(&mut file)?;
