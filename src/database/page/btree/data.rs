@@ -17,7 +17,7 @@ pub struct LeafTableCell {
     /// A varint which is the total number of bytes of payload, including any overflow
     payload_size: u64,
     /// A varint which is the integer key, a.k.a. "rowid"
-    key: u64,
+    pub key: u64,
     /// The initial portion of the payload that does not spill to overflow pages.
     payload: Payload,
     /// A 4-byte big-endian integer page number for the first page of the overflow page list - omitted if all payload fits on the b-tree page.
@@ -27,9 +27,9 @@ pub struct LeafTableCell {
 /// Table B-Tree Interior Cell (header 0x05):
 pub struct InteriorTableCell {
     /// A 4-byte big-endian page number which is the left child pointer.
-    left_child_pointer: u32,
+    pub left_child_pointer: u32,
     /// A varint which is the integer key, a.k.a. "rowid"
-    key: u64,
+    pub key: u64,
 }
 
 /// Index B-Tree Leaf Cell (header 0x0a):

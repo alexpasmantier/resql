@@ -3,6 +3,7 @@ use std::io::SeekFrom;
 
 use self::header::{DatabaseHeader, DATABASE_HEADER_SIZE};
 use self::io::SQLiteFile;
+use self::page::btree::data::CellType;
 use self::page::{
     btree::page::BTreePage, freelist_page::FreeListPage, lockbyte_page::LockBytePage,
     payload_overflow_page::PayloadOverflowPage, pointer_map_page::PointerMapPage, Page, PageType,
@@ -30,6 +31,10 @@ pub enum ObjectType {
     Index,
     View,
     Trigger,
+}
+
+pub trait Condition {
+    fn evaluate(&self, row: &Row) -> bool;
 }
 
 // NOTE: this might not be useful (maybe we return a simple row instead)
@@ -110,6 +115,7 @@ impl Database {
         todo!()
     }
 
+    // WARN: this is probably not useful
     fn traverse_btree(&mut self, root_page_number: u64) -> Result<()> {
         if let Ok(page::Page::BTree(root_page)) =
             self.read_page(root_page_number, page::PageType::BTree)
@@ -129,25 +135,73 @@ impl Database {
         }
     }
 
-    fn traverse_btree_index(&mut self, root_page: page::btree::page::BTreePage) -> Result<()> {
-        todo!()
+    fn traverse_btree_index(
+        &mut self,
+        root_page_number: u32,
+        condition: dyn Condition,
+    ) -> Result<()> {
+        let mut page_pointer_stack: Vec<u32> = vec![root_page_number];
+        while let Some(page_number) = page_pointer_stack.pop() {
+            if let Ok(page::Page::BTree(btree_page)) =
+                self.read_page(page_number as u64, page::PageType::BTree)
+            {
+                match btree_page.page_header.page_type {
+                    page::btree::page::BTreePageType::LeafIndex => {
+                        // do we really have the correct data structures for this?
+                        todo!("finish this");
+                    }
+                    page::btree::page::BTreePageType::InteriorIndex => {
+                        todo!("traverse interior indexes, pushing pointers to page numbers onto a stack etc")
+                    }
+                    _ => bail!(
+                        "Wrong BTreePageType; expected LeafIndex or InteriorIndex, got {:?}",
+                        btree_page.page_header.page_type
+                    ),
+                }
+            } else {
+                bail!("Couldn't read page number {}", page_number);
+            }
+        }
     }
 
-    fn traverse_btree_table(&mut self, root_page: page::btree::page::BTreePage) -> Result<()> {
-        match root_page.page_header.page_type {
-            page::btree::page::BTreePageType::LeafTable => {
-                // do we really have the correct data structures for this?
-                todo!("finish this");
+    fn traverse_btree_table(
+        &mut self,
+        root_page: page::btree::page::BTreePage,
+        condition: dyn Condition,
+    ) -> Result<()> {
+        let mut page_pointer_stack: Vec<u32> = vec![root_page.page_header.page_number];
+        while let Some(page_number) = page_pointer_stack.pop() {
+            if let Ok(page::Page::BTree(btree_page)) =
+                self.read_page(page_number as u64, page::PageType::BTree)
+            {
+                match btree_page.page_header.page_type {
+                    page::btree::page::BTreePageType::LeafTable => {
+                        let page_pointers: Vec<u32> = Vec::new();
+                        btree_page
+                            .cells
+                            .iter()
+                            .fold(page_pointers, |pp, cell| match cell {
+                                CellType::InteriorTable(interior_table_cell) => {
+                                    if condition.evaluate(&interior_table_cell.key) {
+                                        pp.push(interior_table_cell.left_child_pointer);
+                                    }
+                                    pp
+                                }
+
+                                _ => bail!("Wrong cell type; expected LeafTable, got {:?}", cell),
+                            });
+                    }
+                    page::btree::page::BTreePageType::InteriorTable => {
+                        todo!("traverse interior tables, pushing pointers to page numbers onto a stack etc")
+                    }
+                    _ => bail!(
+                        "Wrong BTreePageType; expected LeafTable or InteriorTable, got {:?}",
+                        btree_page.page_header.page_type
+                    ),
+                }
+            } else {
+                bail!("Couldn't read page number {}", page_number);
             }
-            page::btree::page::BTreePageType::InteriorTable => {
-                todo!("traverse interior tables, pushing pointers to page numbers onto a stack etc")
-            }
-            _ => bail!(
-                "Wrong BTreePageType; expected LeafTable or InteriorTable, got {:?}",
-                root_page.page_header.page_type
-            ),
         }
-        // let leaf_pages: Vec<page::btree::page::BTreePage> = Vec::new();
-        // let page_pointer_stack: Vec<u32> = vec![root_page.page_header];
     }
 }

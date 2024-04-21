@@ -39,7 +39,7 @@ impl TryFrom<u8> for BTreePageType {
 // variants
 pub struct BTreePage {
     pub page_header: BTreePageHeader,
-    cells: Vec<CellType>,
+    pub cells: Vec<CellType>,
 }
 
 impl TryFrom<Vec<u8>> for BTreePage {
