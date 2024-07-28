@@ -1,5 +1,7 @@
 use crate::cli;
-use crate::database;
+use crate::database::schema::{ObjectInformation, TableInformation};
+use crate::database::TABLE_SCHEMA_ROOT_PAGE_NUMBER;
+use crate::database::{self, schema};
 use crate::sql::{self, sql_query};
 use anyhow;
 
@@ -11,6 +13,7 @@ pub fn process_command(command: cli::Command) -> anyhow::Result<()> {
     }
 }
 
+/// Prints out general database information by reading the database header.
 fn database_information(filename: String) -> anyhow::Result<()> {
     let database = database::Database::init_from_file(&filename)?;
     // println!("database page size: {}", database.header.page_size);
@@ -18,11 +21,28 @@ fn database_information(filename: String) -> anyhow::Result<()> {
     Ok(())
 }
 
-// TODO:
-fn list_tables(filename: String) -> anyhow::Result<()> {
-    let database = database::Database::init_from_file(&filename)?;
+/// Lists all schema objects in the database.
+/// This is done by reading the schema table and parsing its (potentially) multiple pages.
+fn list_schema_objects(filename: String) -> anyhow::Result<Vec<ObjectInformation>> {
+    let mut database = database::Database::init_from_file(&filename)?;
+    let schema_rows = database
+        .traverse_btree_table(
+            TABLE_SCHEMA_ROOT_PAGE_NUMBER,
+            true,
+            &schema::SCHEMA_TABLE_INFORMATION,
+        )
+        .expect("Failed to parse schema table");
 
-    Ok(())
+    schema_rows.iter().map(|row| ObjectInformation::from(row))
+}
+
+/// Lists all tables in the database.
+fn list_tables(filename: String) -> anyhow::Result<Vec<TableInformation>> {
+    let schema_objects = list_schema_objects(filename)?;
+    schema_objects
+        .iter()
+        .map(|o| TableInformation::try_from(o))
+        .collect()
 }
 
 // TODO:

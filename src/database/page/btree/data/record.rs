@@ -7,7 +7,7 @@ use super::serial_types::{parse_value, SerialType, Value};
 
 pub struct Record {
     serial_types: Vec<SerialType>,
-    values: Vec<Value>,
+    pub values: Vec<Value>,
 }
 
 impl TryFrom<Payload> for Record {
