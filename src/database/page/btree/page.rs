@@ -42,13 +42,6 @@ pub enum BTreePage {
     TableLeaf(BTreePageHeader, Vec<TableLeafCell>),
 }
 
-// FIXME: this looks pretty shitty and should probably be refactored into an enum and several
-// variants
-//pub struct BTreePage {
-//    pub page_header: BTreePageHeader,
-//    pub cells: Vec<CellType>,
-//}
-
 impl TryFrom<Vec<u8>> for BTreePage {
     type Error = anyhow::Error;
 

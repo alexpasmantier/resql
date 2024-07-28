@@ -19,7 +19,7 @@ pub struct TableLeafCell {
     /// A varint which is the integer key, a.k.a. "rowid"
     pub key: u64,
     /// The initial portion of the payload that does not spill to overflow pages.
-    payload: Payload,
+    pub payload: Payload,
     /// A 4-byte big-endian integer page number for the first page of the overflow page list - omitted if all payload fits on the b-tree page.
     first_overflow_page_number: Option<u32>,
 }
