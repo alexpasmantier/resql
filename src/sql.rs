@@ -9,6 +9,19 @@ pub struct CreateTableStatement {
     // todo
 }
 
+/// Simple representation of a SQL SELECT statement
+/// ```sql
+/// SELECT name, color FROM apples WHERE color='blue';
+/// ```
+/// will be parsed into:
+/// ```rust
+/// SelectStatement {
+///    selectables: vec![Selectable::Column("name"), Selectable::Column("color")],
+///    from_target: Targetable::TableOrView("apples"),
+///    conditions: vec![Condition {column: "color", value: "blue"}]
+/// }
+/// ```
+///
 #[derive(Debug, PartialEq)]
 pub struct SelectStatement {
     pub selectables: Vec<Selectable>,
@@ -16,28 +29,55 @@ pub struct SelectStatement {
     pub conditions: Vec<Condition>,
 }
 
+/// Any column or COUNT(*) in a SELECT statement
+/// ```sql
+/// SELECT name, COUNT(*) FROM apples;
+/// ```
+/// will be parsed into:
+/// ```rust
+/// vec![Selectable::Column("name"), Selectable::CountStar]
+/// ```
 #[derive(Debug, PartialEq)]
-enum Selectable {
+pub enum Selectable {
     Column(String),
     CountStar,
 }
 
+/// Any table or view in a FROM clause
+/// ```sql
+/// SELECT name FROM apples;
+/// ```
+/// will be parsed into:
+/// ```rust
+/// Targetable::TableOrView("apples")
+/// ```
 #[derive(Debug, PartialEq)]
-enum Targetable {
+pub enum Targetable {
     TableOrView(String),
     Other(String),
 }
 
 /// This assumes we only have "column-value" string-string equality conditions for now
 #[derive(Debug, PartialEq)]
-struct Condition {
+pub struct Condition {
     pub column: String,
     pub value: String,
 }
 
 peg::parser! {
-  grammar sql_query() for str {
-    // SELECT COUNT(*) FROM apples WHERE color='blue';
+  pub grammar sql_query() for str {
+    /// Parses a simple SELECT statement
+    /// ```sql
+    /// SELECT name, color FROM apples WHERE color='blue';
+    /// ```
+    /// will be parsed into:
+    /// ```rust
+    /// SelectStatement {
+    ///   selectables: vec![Selectable::Column("name"), Selectable::Column("color")],
+    ///   from_target: Targetable::TableOrView("apples"),
+    ///   conditions: vec![Condition {column: "color", value: "blue"}]
+    ///   }
+    /// ```
     pub rule select_statement() -> SelectStatement
         = select() _+ selectables:(selectable() ++ [',' | _] ) _+ from()
         _+ from_target:targetable() _+ where() _+ conditions:(condition() ++ and())

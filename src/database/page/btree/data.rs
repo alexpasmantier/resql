@@ -4,16 +4,16 @@ use nom::{number::complete::be_u32, IResult};
 use crate::parsing::utils::take_varint;
 
 pub enum CellType {
-    LeafTable(LeafTableCell),
-    InteriorTable(InteriorTableCell),
-    LeafIndex(LeafIndexCell),
-    InteriorIndex(InteriorIndexCell),
+    TableLeaf(TableLeafCell),
+    TableInterior(TableInteriorCell),
+    IndexLeaf(IndexLeafCell),
+    IndexInterior(IndexInteriorCell),
 }
 pub mod record;
 pub mod serial_types;
 
 /// Table B-Tree Leaf Cell (header 0x0d)
-pub struct LeafTableCell {
+pub struct TableLeafCell {
     /// A varint which is the total number of bytes of payload, including any overflow
     payload_size: u64,
     /// A varint which is the integer key, a.k.a. "rowid"
@@ -25,7 +25,7 @@ pub struct LeafTableCell {
 }
 
 /// Table B-Tree Interior Cell (header 0x05):
-pub struct InteriorTableCell {
+pub struct TableInteriorCell {
     /// A 4-byte big-endian page number which is the left child pointer.
     pub left_child_pointer: u32,
     /// A varint which is the integer key, a.k.a. "rowid"
@@ -33,7 +33,7 @@ pub struct InteriorTableCell {
 }
 
 /// Index B-Tree Leaf Cell (header 0x0a):
-pub struct LeafIndexCell {
+pub struct IndexLeafCell {
     /// A varint which is the total number of bytes of key payload, including any overflow
     payload_size: u64,
     /// The initial portion of the payload that does not spill to overflow pages.
@@ -43,7 +43,7 @@ pub struct LeafIndexCell {
 }
 
 /// Index B-Tree Interior Cell (header 0x02):
-pub struct InteriorIndexCell {
+pub struct IndexInteriorCell {
     /// A 4-byte big-endian page number which is the left child pointer.
     left_child_pointer: u32,
     /// A varint which is the total number of bytes of key payload, including any overflow
@@ -74,12 +74,12 @@ fn parse_first_overflow_page_number(input: &[u8]) -> IResult<&[u8], u32> {
     be_u32(input)
 }
 
-pub fn parse_leaf_table_cell(input: &[u8]) -> Result<CellType> {
+pub fn parse_table_leaf_cell(input: &[u8]) -> Result<CellType> {
     let (input, payload_size) = parse_payload_size(input)?;
     let (input, key) = parse_rowid(input)?;
     // overflow is not handled for the moment
     if let Some(payload_content) = input.get(..payload_size as usize) {
-        Ok(CellType::LeafTable(LeafTableCell {
+        Ok(CellType::TableLeaf(TableLeafCell {
             payload_size,
             key,
             payload: Payload {
@@ -95,20 +95,20 @@ pub fn parse_leaf_table_cell(input: &[u8]) -> Result<CellType> {
     }
 }
 
-pub fn parse_interior_table_cell(input: &[u8]) -> Result<CellType> {
+pub fn parse_table_interior_cell(input: &[u8]) -> Result<CellType> {
     let (input, left_child_pointer) = parse_left_child_pointer(input)?;
     let (input, key) = parse_rowid(input)?;
-    Ok(CellType::InteriorTable(InteriorTableCell {
+    Ok(CellType::TableInterior(TableInteriorCell {
         left_child_pointer,
         key,
     }))
 }
 
-pub fn parse_leaf_index_cell(input: &[u8]) -> Result<CellType> {
+pub fn parse_index_leaf_cell(input: &[u8]) -> Result<CellType> {
     let (input, payload_size) = parse_payload_size(input)?;
     // overflow is not handled for the moment
     if let Some(payload_content) = input.get(..payload_size as usize) {
-        Ok(CellType::LeafIndex(LeafIndexCell {
+        Ok(CellType::IndexLeaf(IndexLeafCell {
             payload_size,
             payload: Payload {
                 content: payload_content.to_vec(),
@@ -123,12 +123,12 @@ pub fn parse_leaf_index_cell(input: &[u8]) -> Result<CellType> {
     }
 }
 
-pub fn parse_interior_index_cell(input: &[u8]) -> Result<CellType> {
+pub fn parse_index_interior_cell(input: &[u8]) -> Result<CellType> {
     let (input, left_child_pointer) = parse_left_child_pointer(input)?;
     let (input, payload_size) = parse_payload_size(input)?;
     // overflow is not handled for the moment
     if let Some(payload_content) = input.get(..payload_size as usize) {
-        Ok(CellType::InteriorIndex(InteriorIndexCell {
+        Ok(CellType::IndexInterior(IndexInteriorCell {
             left_child_pointer,
             payload_size,
             payload: Payload {

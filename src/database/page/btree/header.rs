@@ -32,7 +32,7 @@ pub fn parse_btree_page_header(page_bytes: &[u8]) -> Result<(&[u8], BTreePageHea
     let right_most_pointer: Option<u32>;
 
     match page_type {
-        BTreePageType::InteriorIndex | BTreePageType::InteriorTable => {
+        BTreePageType::IndexInterior | BTreePageType::TableInterior => {
             // read the 4 extra bytes and produce value
             right_most_pointer = Some(u32::from_be_bytes(page_bytes[8..12].try_into().unwrap()));
         }

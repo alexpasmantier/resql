@@ -4,8 +4,8 @@ use anyhow::{anyhow, Context, Error, Result};
 use itertools::Itertools;
 
 use crate::database::page::btree::data::{
-    parse_interior_index_cell, parse_interior_table_cell, parse_leaf_index_cell,
-    parse_leaf_table_cell,
+    parse_index_interior_cell, parse_index_leaf_cell, parse_table_interior_cell,
+    parse_table_leaf_cell, IndexInteriorCell, IndexLeafCell, TableInteriorCell, TableLeafCell,
 };
 
 use super::data::CellType;
@@ -13,20 +13,20 @@ use super::header::{parse_btree_page_header, BTreePageHeader};
 
 #[derive(Debug)]
 pub enum BTreePageType {
-    InteriorIndex,
-    InteriorTable,
-    LeafIndex,
-    LeafTable,
+    IndexInterior,
+    IndexLeaf,
+    TableInterior,
+    TableLeaf,
 }
 impl TryFrom<u8> for BTreePageType {
     type Error = Error;
 
     fn try_from(value: u8) -> Result<Self> {
         match value {
-            2 => Ok(BTreePageType::InteriorIndex),
-            5 => Ok(BTreePageType::InteriorTable),
-            10 => Ok(BTreePageType::LeafIndex),
-            13 => Ok(BTreePageType::LeafTable),
+            2 => Ok(BTreePageType::IndexInterior),
+            5 => Ok(BTreePageType::TableInterior),
+            10 => Ok(BTreePageType::IndexLeaf),
+            13 => Ok(BTreePageType::TableLeaf),
             i => Err(anyhow!(
                 "Value {} does not correspond to any valid page type",
                 i
@@ -35,12 +35,19 @@ impl TryFrom<u8> for BTreePageType {
     }
 }
 
+pub enum BTreePage {
+    IndexInterior(BTreePageHeader, Vec<IndexInteriorCell>),
+    IndexLeaf(BTreePageHeader, Vec<IndexLeafCell>),
+    TableInterior(BTreePageHeader, Vec<TableInteriorCell>),
+    TableLeaf(BTreePageHeader, Vec<TableLeafCell>),
+}
+
 // FIXME: this looks pretty shitty and should probably be refactored into an enum and several
 // variants
-pub struct BTreePage {
-    pub page_header: BTreePageHeader,
-    pub cells: Vec<CellType>,
-}
+//pub struct BTreePage {
+//    pub page_header: BTreePageHeader,
+//    pub cells: Vec<CellType>,
+//}
 
 impl TryFrom<Vec<u8>> for BTreePage {
     type Error = anyhow::Error;
@@ -62,17 +69,23 @@ impl TryFrom<Vec<u8>> for BTreePage {
         // parse cells
         let cell_parser: fn(&[u8]) -> Result<CellType>;
         match header.page_type {
-            BTreePageType::InteriorTable => cell_parser = parse_interior_table_cell,
-            BTreePageType::LeafTable => cell_parser = parse_leaf_table_cell,
-            BTreePageType::InteriorIndex => cell_parser = parse_interior_index_cell,
-            BTreePageType::LeafIndex => cell_parser = parse_leaf_index_cell,
+            BTreePageType::TableInterior => {
+                let cells = parse_cells(&value, cell_pointer_array, parse_table_interior_cell)?;
+                return Ok(BTreePage::TableInterior(header, cells));
+            }
+            BTreePageType::TableLeaf => {
+                let cells = parse_cells(&value, cell_pointer_array, parse_table_leaf_cell)?;
+                return Ok(BTreePage::TableLeaf(header, cells));
+            }
+            BTreePageType::IndexInterior => {
+                let cells = parse_cells(&value, cell_pointer_array, parse_index_interior_cell)?;
+                return Ok(BTreePage::IndexInterior(header, cells));
+            }
+            BTreePageType::IndexLeaf => {
+                let cells = parse_cells(&value, cell_pointer_array, parse_index_leaf_cell)?;
+                return Ok(BTreePage::IndexLeaf(header, cells));
+            }
         }
-        let cells = parse_cells(&value, cell_pointer_array, cell_parser)?;
-
-        Ok(BTreePage {
-            page_header: header,
-            cells,
-        })
     }
 }
 

@@ -1,5 +1,10 @@
 use anyhow::{anyhow, bail, Result};
+use page::btree::data::serial_types::Value;
+use std::collections::HashMap;
 use std::io::SeekFrom;
+use std::ops::Index;
+
+use crate::sql;
 
 use self::header::{DatabaseHeader, DATABASE_HEADER_SIZE};
 use self::io::SQLiteFile;
@@ -33,8 +38,20 @@ pub enum ObjectType {
     Trigger,
 }
 
-pub trait Condition {
+pub trait Filter {
     fn evaluate(&self, row: &Row) -> bool;
+}
+
+impl Filter for sql::SelectStatement {
+    fn evaluate(&self, row: &Row) -> bool {
+        self.conditions.iter().all(|condition| {
+            // it's fine to unwrap here because the statement has been validated
+            // at this point so we know the column exists
+            let value = &row[&condition.column].unwrap();
+            // this only accounts for string literals which is fine for now
+            value == condition.value
+        })
+    }
 }
 
 // NOTE: this might not be useful (maybe we return a simple row instead)
@@ -47,6 +64,33 @@ pub struct TableInformation {
 pub struct Row {
     pub rowid: u64,
     pub columns: Vec<Column>,
+    pub hmap: HashMap<String, Value>,
+}
+
+impl Row {
+    pub fn new(rowid: u64, columns: Vec<Column>) -> Row {
+        let mut hmap = HashMap::new();
+        hmap.insert("rowid".to_string(), Value::Int64(rowid as i64));
+        for column in &columns {
+            hmap.insert(column.name, column.value);
+        }
+        Row {
+            rowid,
+            columns,
+            hmap,
+        }
+    }
+}
+
+impl<K> Index<K> for Row
+where
+    K: std::hash::Hash + Eq,
+{
+    type Output = Option<Value>;
+
+    fn index(&self, index: K) -> &Self::Output {
+        self.hmap.get(&index)
+    }
 }
 
 pub struct Column {
@@ -115,42 +159,18 @@ impl Database {
         todo!()
     }
 
-    // WARN: this is probably not useful
-    fn traverse_btree(&mut self, root_page_number: u64) -> Result<()> {
-        if let Ok(page::Page::BTree(root_page)) =
-            self.read_page(root_page_number, page::PageType::BTree)
-        {
-            match root_page.page_header.page_type {
-                page::btree::page::BTreePageType::LeafIndex
-                | page::btree::page::BTreePageType::InteriorIndex => {
-                    self.traverse_btree_index(root_page)
-                }
-                page::btree::page::BTreePageType::LeafTable
-                | page::btree::page::BTreePageType::InteriorTable => {
-                    self.traverse_btree_table(root_page)
-                }
-            }
-        } else {
-            Err(anyhow!("something went wrong"))
-        }
-    }
-
-    fn traverse_btree_index(
-        &mut self,
-        root_page_number: u32,
-        condition: dyn Condition,
-    ) -> Result<()> {
+    fn traverse_btree_index(&mut self, root_page_number: u32, condition: dyn Filter) -> Result<()> {
         let mut page_pointer_stack: Vec<u32> = vec![root_page_number];
         while let Some(page_number) = page_pointer_stack.pop() {
             if let Ok(page::Page::BTree(btree_page)) =
                 self.read_page(page_number as u64, page::PageType::BTree)
             {
-                match btree_page.page_header.page_type {
-                    page::btree::page::BTreePageType::LeafIndex => {
+                match btree_page {
+                    page::btree::page::BTreePage::IndexLeaf(header, cells) => {
                         // do we really have the correct data structures for this?
                         todo!("finish this");
                     }
-                    page::btree::page::BTreePageType::InteriorIndex => {
+                    page::btree::page::BTreePage::IndexInterior(header, cells) => {
                         todo!("traverse interior indexes, pushing pointers to page numbers onto a stack etc")
                     }
                     _ => bail!(
@@ -167,7 +187,7 @@ impl Database {
     fn traverse_btree_table(
         &mut self,
         root_page: page::btree::page::BTreePage,
-        condition: dyn Condition,
+        condition: dyn Filter,
     ) -> Result<()> {
         let mut page_pointer_stack: Vec<u32> = vec![root_page.page_header.page_number];
         while let Some(page_number) = page_pointer_stack.pop() {
@@ -175,13 +195,13 @@ impl Database {
                 self.read_page(page_number as u64, page::PageType::BTree)
             {
                 match btree_page.page_header.page_type {
-                    page::btree::page::BTreePageType::LeafTable => {
+                    page::btree::page::BTreePageType::TableLeaf => {
                         let page_pointers: Vec<u32> = Vec::new();
                         btree_page
                             .cells
                             .iter()
                             .fold(page_pointers, |pp, cell| match cell {
-                                CellType::InteriorTable(interior_table_cell) => {
+                                CellType::TableInterior(interior_table_cell) => {
                                     if condition.evaluate(&interior_table_cell.key) {
                                         pp.push(interior_table_cell.left_child_pointer);
                                     }
@@ -191,7 +211,7 @@ impl Database {
                                 _ => bail!("Wrong cell type; expected LeafTable, got {:?}", cell),
                             });
                     }
-                    page::btree::page::BTreePageType::InteriorTable => {
+                    page::btree::page::BTreePageType::TableInterior => {
                         todo!("traverse interior tables, pushing pointers to page numbers onto a stack etc")
                     }
                     _ => bail!(
